@@ -25,6 +25,17 @@ So, the goal of this Livebook is to:
 
 Let's get cookin'!
 
+> ***Note:***
+> 
+> The source code for this livebook
+> is available [here](https://github.com/christhekeele/livebooks/blob/main/priv/life.livemd),
+> under the [MIT license](https://github.com/christhekeele/livebooks/blob/main/LICENSE.livemd).
+> 
+> Feel free to [copy it](https://raw.githubusercontent.com/christhekeele/livebooks/main/priv/life.livemd),
+> [open an issue](https://github.com/christhekeele/livebooks/issues),
+> or [start a discussion](https://github.com/christhekeele/livebooks/discussions/new)
+> there!
+
 ## Background
 
 ### Conway's Game of Life
@@ -90,13 +101,16 @@ so we'll be using that to render our simulation.
 Here's how I'm going to approach this:
 
 1. Figure out how to create a game board
-2. Figure out how to turn it into an `Nx` matrix
-3. Figure out how to draw grids in `VegaLite`
-4. Figure out how to convert `Nx` matrices into `VegaLite` datasets
-5. Figure out how to transform our board each tick
-6. Figure out how to use `Keno` to continually tick our board
+   * by accepting input from `Kino`
+   * and turning it into an `Nx` matrix
+2. Figure out how to draw grids in `VegaLite`
+   * and convert our `Nx` matrix game board into a renderable `VegaLite` dataset
+3. Figure out how to transform our board each tick
+   * by implementing matrix convolution
+   * and using it to create a liveness filter
+4. Figure out how to use `Keno` to continually tick our board
 
-With that all in place, we should have a running simulation!
+With that all in place, we should have a running GoL simulation!
 
 ## Setup
 
@@ -413,7 +427,7 @@ We want to render our
 
 ```elixir
 {board_height, board_width} = Nx.shape(initial_board)
-square_side = graphic_width / board_width
+square_side = graphic_width / board_widths
 graphic_height = board_height * square_side
 ```
 
