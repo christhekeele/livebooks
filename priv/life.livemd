@@ -1,7 +1,5 @@
 <!-- vim: set syntax=markdown: -->
 
-<!-- livebook:{"persist_outputs":true} -->
-
 # Life in Livebook & Nx
 
 ## Challenge
@@ -98,7 +96,7 @@ so we'll be using that to render our simulation.
 
 ## Gameplan
 
-Here's how I'm going to approach this:
+Here's how we're going to approach this:
 
 1. Figure out how to create a game board
    * by accepting input from `Kino`
@@ -122,10 +120,6 @@ Mix.install([
   {:kino, "~> 0.4"},
   {:vega_lite, "~> 0.1"}
 ])
-```
-
-```output
-:ok
 ```
 
 ## Board Input
@@ -165,10 +159,6 @@ Kino.render(initial_board_input)
 initial_board_text = Kino.Input.read(initial_board_input)
 ```
 
-```output
-"000000000000000\n000000000000000\n000000000000000\n000110111111000\n000110111111000\n000110000000000\n000110000011000\n000110000011000\n000110000011000\n000000000011000\n000111111011000\n000111111011000\n000000000000000\n000000000000000\n000000000000000"
-```
-
 ## Building the Board
 
 Since we'll represent our board as a matrix under the hood, it makes sense to use `0.0` to represent dead cells, and `1.0` to represent live cells.
@@ -196,26 +186,6 @@ initial_board_data =
   end)
 ```
 
-```output
-[
-  [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-  [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-  [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-  [0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0],
-  [0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0],
-  [0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-  [0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0],
-  [0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0],
-  [0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0],
-  [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0],
-  [0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0],
-  [0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0],
-  [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-  [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-  [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-]
-```
-
 This is exactly the shape we need to turn our input into an `Nx.tensor`! We'll label each dimension as `:y` and `:x` (in that order, outer-most first):
 
 <!-- livebook:{"reevaluate_automatically":true} -->
@@ -226,19 +196,6 @@ initial_board =
     initial_board_data,
     names: [:y, :x]
   )
-```
-
-```output
-#Nx.Tensor<
-  f32[y: 15][x: 15]
-  [
-    [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-    [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-    [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-    [0.0, 0.0, 0.0, 1.0, 1.0, ...],
-    ...
-  ]
->
 ```
 
 ## Drawing a Grid
@@ -263,10 +220,6 @@ example_graphic =
     axis_X: [orient: "top"]
   )
 
-:ok
-```
-
-```output
 :ok
 ```
 
@@ -307,10 +260,6 @@ example_graphic
 |> VegaLite.data_from_values(example_dataset)
 ```
 
-```vega-lite
-{"$schema":"https://vega.github.io/schema/vega-lite/v5.json","config":{"axis":{"grid":true},"axisX":{"orient":"top"}},"data":{"values":[{"x":0,"y":0},{"x":1,"y":1}]},"encoding":{"x":{"field":"x"},"y":{"field":"y"}},"mark":"square"}
-```
-
 Next, we want the value of each of our cells to be represented as a distinct color in the graphic.
 
 VegaLite recognizes the special channel `:color` for this purpose.
@@ -330,10 +279,6 @@ example_dataset = [
 example_graphic
 |> VegaLite.encode_field(:color, "value")
 |> VegaLite.data_from_values(example_dataset)
-```
-
-```vega-lite
-{"$schema":"https://vega.github.io/schema/vega-lite/v5.json","config":{"axis":{"grid":true},"axisX":{"orient":"top"}},"data":{"values":[{"value":0.0,"x":0,"y":0},{"value":0.5,"x":0,"y":1},{"value":1.0,"x":1,"y":0},{"value":1.5,"x":1,"y":1}]},"encoding":{"color":{"field":"value"},"x":{"field":"x"},"y":{"field":"y"}},"mark":"square"}
 ```
 
 We can constrain the available colors to a pre-defined scale,
@@ -359,10 +304,6 @@ example_graphic
 |> VegaLite.data_from_values(example_dataset)
 ```
 
-```vega-lite
-{"$schema":"https://vega.github.io/schema/vega-lite/v5.json","config":{"axis":{"grid":true},"axisX":{"orient":"top"}},"data":{"values":[{"value":0.0,"x":0,"y":0},{"value":0.5,"x":0,"y":1},{"value":1.0,"x":1,"y":0},{"value":1.5,"x":1,"y":1},{"value":2.0,"x":1,"y":2},{"value":2.5,"x":2,"y":2}]},"encoding":{"color":{"field":"value","scale":{"range":["purple","green","gold"]}},"x":{"field":"x"},"y":{"field":"y"}},"mark":"square"}
-```
-
 Since we really only want to display GoL cells as white or black,
 and cell values will only ever be `0.0` or `1.0`,
 we can just instruct our grid view
@@ -376,10 +317,6 @@ example_graphic =
   example_graphic
   |> VegaLite.encode_field(:color, "value", scale: [range: ["white", "black"]])
 
-:ok
-```
-
-```output
 :ok
 ```
 
@@ -400,10 +337,6 @@ example_dataset = [
 example_graphic |> VegaLite.data_from_values(example_dataset)
 ```
 
-```vega-lite
-{"$schema":"https://vega.github.io/schema/vega-lite/v5.json","config":{"axis":{"grid":true},"axisX":{"orient":"top"}},"data":{"values":[{"value":0.0,"x":0,"y":0},{"value":0.5,"x":0,"y":1},{"value":1.0,"x":1,"y":0},{"value":1.5,"x":1,"y":1},{"value":2.0,"x":1,"y":2},{"value":2.5,"x":2,"y":2}]},"encoding":{"color":{"field":"value","scale":{"range":["white","black"]}},"x":{"field":"x"},"y":{"field":"y"}},"mark":"square"}
-```
-
 Finally, let's scale the squares on this grid to look like
  proper cellular automata.
 
@@ -417,22 +350,14 @@ First, let's choose to render graphics at a `800px` width, which displays well i
 graphic_width = 800
 ```
 
-```output
-800
-```
-
 We want to render our
 
 <!-- livebook:{"reevaluate_automatically":true} -->
 
 ```elixir
 {board_height, board_width} = Nx.shape(initial_board)
-square_side = graphic_width / board_widths
+square_side = graphic_width / board_width
 graphic_height = board_height * square_side
-```
-
-```output
-800.0
 ```
 
 This lets us build our base grid-view, scaled to fit our page.
@@ -447,17 +372,13 @@ grid_view =
     size: :math.pow(square_side, 2),
     legend: false
   )
-  |> VegaLite.config(axis: [grid: true, labels: false, header: nil, title: nil, ticks: false])
+  |> VegaLite.config(axis: [grid: true, labels: false, title: nil, ticks: false])
   |> VegaLite.encode_field(:x, "x")
   |> VegaLite.encode_field(:y, "y")
   |> VegaLite.encode_field(:color, "value",
     scale: [range: ["white", "black"]],
-    legend: nil
+    legend: false
   )
-```
-
-```vega-lite
-{"$schema":"https://vega.github.io/schema/vega-lite/v5.json","config":{"axis":{"grid":true,"header":null,"labels":false,"ticks":false,"title":null}},"encoding":{"color":{"field":"value","legend":null,"scale":{"range":["white","black"]}},"x":{"field":"x"},"y":{"field":"y"}},"height":800.0,"mark":{"legend":false,"size":2844.444444444445,"type":"square"},"width":800}
 ```
 
 This will be our VegaLite grid-view that we use throughout the rest of the exercise.
@@ -483,20 +404,12 @@ board_to_dataset = fn board ->
 end
 ```
 
-```output
-#Function<44.40011524/1 in :erl_eval.expr/5>
-```
-
 With this, we can finally render our initial board!
 
 <!-- livebook:{"reevaluate_automatically":true} -->
 
 ```elixir
 VegaLite.data_from_values(grid_view, board_to_dataset.(initial_board))
-```
-
-```vega-lite
-{"$schema":"https://vega.github.io/schema/vega-lite/v5.json","config":{"axis":{"grid":true,"header":null,"labels":false,"ticks":false,"title":null}},"data":{"values":[{"value":0.0,"x":0,"y":0},{"value":0.0,"x":1,"y":0},{"value":0.0,"x":2,"y":0},{"value":0.0,"x":3,"y":0},{"value":0.0,"x":4,"y":0},{"value":0.0,"x":5,"y":0},{"value":0.0,"x":6,"y":0},{"value":0.0,"x":7,"y":0},{"value":0.0,"x":8,"y":0},{"value":0.0,"x":9,"y":0},{"value":0.0,"x":10,"y":0},{"value":0.0,"x":11,"y":0},{"value":0.0,"x":12,"y":0},{"value":0.0,"x":13,"y":0},{"value":0.0,"x":14,"y":0},{"value":0.0,"x":0,"y":1},{"value":0.0,"x":1,"y":1},{"value":0.0,"x":2,"y":1},{"value":0.0,"x":3,"y":1},{"value":0.0,"x":4,"y":1},{"value":0.0,"x":5,"y":1},{"value":0.0,"x":6,"y":1},{"value":0.0,"x":7,"y":1},{"value":0.0,"x":8,"y":1},{"value":0.0,"x":9,"y":1},{"value":0.0,"x":10,"y":1},{"value":0.0,"x":11,"y":1},{"value":0.0,"x":12,"y":1},{"value":0.0,"x":13,"y":1},{"value":0.0,"x":14,"y":1},{"value":0.0,"x":0,"y":2},{"value":0.0,"x":1,"y":2},{"value":0.0,"x":2,"y":2},{"value":0.0,"x":3,"y":2},{"value":0.0,"x":4,"y":2},{"value":0.0,"x":5,"y":2},{"value":0.0,"x":6,"y":2},{"value":0.0,"x":7,"y":2},{"value":0.0,"x":8,"y":2},{"value":0.0,"x":9,"y":2},{"value":0.0,"x":10,"y":2},{"value":0.0,"x":11,"y":2},{"value":0.0,"x":12,"y":2},{"value":0.0,"x":13,"y":2},{"value":0.0,"x":14,"y":2},{"value":0.0,"x":0,"y":3},{"value":0.0,"x":1,"y":3},{"value":0.0,"x":2,"y":3},{"value":1.0,"x":3,"y":3},{"value":1.0,"x":4,"y":3},{"value":0.0,"x":5,"y":3},{"value":1.0,"x":6,"y":3},{"value":1.0,"x":7,"y":3},{"value":1.0,"x":8,"y":3},{"value":1.0,"x":9,"y":3},{"value":1.0,"x":10,"y":3},{"value":1.0,"x":11,"y":3},{"value":0.0,"x":12,"y":3},{"value":0.0,"x":13,"y":3},{"value":0.0,"x":14,"y":3},{"value":0.0,"x":0,"y":4},{"value":0.0,"x":1,"y":4},{"value":0.0,"x":2,"y":4},{"value":1.0,"x":3,"y":4},{"value":1.0,"x":4,"y":4},{"value":0.0,"x":5,"y":4},{"value":1.0,"x":6,"y":4},{"value":1.0,"x":7,"y":4},{"value":1.0,"x":8,"y":4},{"value":1.0,"x":9,"y":4},{"value":1.0,"x":10,"y":4},{"value":1.0,"x":11,"y":4},{"value":0.0,"x":12,"y":4},{"value":0.0,"x":13,"y":4},{"value":0.0,"x":14,"y":4},{"value":0.0,"x":0,"y":5},{"value":0.0,"x":1,"y":5},{"value":0.0,"x":2,"y":5},{"value":1.0,"x":3,"y":5},{"value":1.0,"x":4,"y":5},{"value":0.0,"x":5,"y":5},{"value":0.0,"x":6,"y":5},{"value":0.0,"x":7,"y":5},{"value":0.0,"x":8,"y":5},{"value":0.0,"x":9,"y":5},{"value":0.0,"x":10,"y":5},{"value":0.0,"x":11,"y":5},{"value":0.0,"x":12,"y":5},{"value":0.0,"x":13,"y":5},{"value":0.0,"x":14,"y":5},{"value":0.0,"x":0,"y":6},{"value":0.0,"x":1,"y":6},{"value":0.0,"x":2,"y":6},{"value":1.0,"x":3,"y":6},{"value":1.0,"x":4,"y":6},{"value":0.0,"x":5,"y":6},{"value":0.0,"x":6,"y":6},{"value":0.0,"x":7,"y":6},{"value":0.0,"x":8,"y":6},{"value":0.0,"x":9,"y":6},{"value":1.0,"x":10,"y":6},{"value":1.0,"x":11,"y":6},{"value":0.0,"x":12,"y":6},{"value":0.0,"x":13,"y":6},{"value":0.0,"x":14,"y":6},{"value":0.0,"x":0,"y":7},{"value":0.0,"x":1,"y":7},{"value":0.0,"x":2,"y":7},{"value":1.0,"x":3,"y":7},{"value":1.0,"x":4,"y":7},{"value":0.0,"x":5,"y":7},{"value":0.0,"x":6,"y":7},{"value":0.0,"x":7,"y":7},{"value":0.0,"x":8,"y":7},{"value":0.0,"x":9,"y":7},{"value":1.0,"x":10,"y":7},{"value":1.0,"x":11,"y":7},{"value":0.0,"x":12,"y":7},{"value":0.0,"x":13,"y":7},{"value":0.0,"x":14,"y":7},{"value":0.0,"x":0,"y":8},{"value":0.0,"x":1,"y":8},{"value":0.0,"x":2,"y":8},{"value":1.0,"x":3,"y":8},{"value":1.0,"x":4,"y":8},{"value":0.0,"x":5,"y":8},{"value":0.0,"x":6,"y":8},{"value":0.0,"x":7,"y":8},{"value":0.0,"x":8,"y":8},{"value":0.0,"x":9,"y":8},{"value":1.0,"x":10,"y":8},{"value":1.0,"x":11,"y":8},{"value":0.0,"x":12,"y":8},{"value":0.0,"x":13,"y":8},{"value":0.0,"x":14,"y":8},{"value":0.0,"x":0,"y":9},{"value":0.0,"x":1,"y":9},{"value":0.0,"x":2,"y":9},{"value":0.0,"x":3,"y":9},{"value":0.0,"x":4,"y":9},{"value":0.0,"x":5,"y":9},{"value":0.0,"x":6,"y":9},{"value":0.0,"x":7,"y":9},{"value":0.0,"x":8,"y":9},{"value":0.0,"x":9,"y":9},{"value":1.0,"x":10,"y":9},{"value":1.0,"x":11,"y":9},{"value":0.0,"x":12,"y":9},{"value":0.0,"x":13,"y":9},{"value":0.0,"x":14,"y":9},{"value":0.0,"x":0,"y":10},{"value":0.0,"x":1,"y":10},{"value":0.0,"x":2,"y":10},{"value":1.0,"x":3,"y":10},{"value":1.0,"x":4,"y":10},{"value":1.0,"x":5,"y":10},{"value":1.0,"x":6,"y":10},{"value":1.0,"x":7,"y":10},{"value":1.0,"x":8,"y":10},{"value":0.0,"x":9,"y":10},{"value":1.0,"x":10,"y":10},{"value":1.0,"x":11,"y":10},{"value":0.0,"x":12,"y":10},{"value":0.0,"x":13,"y":10},{"value":0.0,"x":14,"y":10},{"value":0.0,"x":0,"y":11},{"value":0.0,"x":1,"y":11},{"value":0.0,"x":2,"y":11},{"value":1.0,"x":3,"y":11},{"value":1.0,"x":4,"y":11},{"value":1.0,"x":5,"y":11},{"value":1.0,"x":6,"y":11},{"value":1.0,"x":7,"y":11},{"value":1.0,"x":8,"y":11},{"value":0.0,"x":9,"y":11},{"value":1.0,"x":10,"y":11},{"value":1.0,"x":11,"y":11},{"value":0.0,"x":12,"y":11},{"value":0.0,"x":13,"y":11},{"value":0.0,"x":14,"y":11},{"value":0.0,"x":0,"y":12},{"value":0.0,"x":1,"y":12},{"value":0.0,"x":2,"y":12},{"value":0.0,"x":3,"y":12},{"value":0.0,"x":4,"y":12},{"value":0.0,"x":5,"y":12},{"value":0.0,"x":6,"y":12},{"value":0.0,"x":7,"y":12},{"value":0.0,"x":8,"y":12},{"value":0.0,"x":9,"y":12},{"value":0.0,"x":10,"y":12},{"value":0.0,"x":11,"y":12},{"value":0.0,"x":12,"y":12},{"value":0.0,"x":13,"y":12},{"value":0.0,"x":14,"y":12},{"value":0.0,"x":0,"y":13},{"value":0.0,"x":1,"y":13},{"value":0.0,"x":2,"y":13},{"value":0.0,"x":3,"y":13},{"value":0.0,"x":4,"y":13},{"value":0.0,"x":5,"y":13},{"value":0.0,"x":6,"y":13},{"value":0.0,"x":7,"y":13},{"value":0.0,"x":8,"y":13},{"value":0.0,"x":9,"y":13},{"value":0.0,"x":10,"y":13},{"value":0.0,"x":11,"y":13},{"value":0.0,"x":12,"y":13},{"value":0.0,"x":13,"y":13},{"value":0.0,"x":14,"y":13},{"value":0.0,"x":0,"y":14},{"value":0.0,"x":1,"y":14},{"value":0.0,"x":2,"y":14},{"value":0.0,"x":3,"y":14},{"value":0.0,"x":4,"y":14},{"value":0.0,"x":5,"y":14},{"value":0.0,"x":6,"y":14},{"value":0.0,"x":7,"y":14},{"value":0.0,"x":8,"y":14},{"value":0.0,"x":9,"y":14},{"value":0.0,"x":10,"y":14},{"value":0.0,"x":11,"y":14},{"value":0.0,"x":12,"y":14},{"value":0.0,"x":13,"y":14},{"value":0.0,"x":14,"y":14}]},"encoding":{"color":{"field":"value","legend":null,"scale":{"range":["white","black"]}},"x":{"field":"x"},"y":{"field":"y"}},"height":800.0,"mark":{"legend":false,"size":2844.444444444445,"type":"square"},"width":800}
 ```
 
 ## WIP
@@ -536,31 +449,6 @@ end
 
 {y, x} = {1, 0}
 neighbourhood.(initial_board, {y, x})
-```
-
-```output
-#Nx.Tensor<
-  f32[y: 15][x: 15]
-  [
-    [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-    [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-    [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-    [0.0, 0.0, 0.0, 1.0, 1.0, ...],
-    ...
-  ]
->
-height+width: {15, 15}
-```
-
-```output
-#Nx.Tensor<
-  f32[3][3]
-  [
-    [0.0, 0.0, 0.0],
-    [0.0, 0.0, 0.0],
-    [0.0, 0.0, 0.0]
-  ]
->
 ```
 
 <!-- livebook:{"reevaluate_automatically":true} -->
@@ -614,44 +502,6 @@ result =
 IO.inspect({result, expected})
 ```
 
-```output
-{#Nx.Tensor<
-   s64[3][3]
-   [
-     [-13, -20, -17],
-     [-18, -24, -18],
-     [13, 20, 17]
-   ]
- >,
- #Nx.Tensor<
-   s64[3][3]
-   [
-     [-13, -20, -17],
-     [-18, -24, -18],
-     [12, 20, 17]
-   ]
- >}
-```
-
-```output
-{#Nx.Tensor<
-   s64[3][3]
-   [
-     [-13, -20, -17],
-     [-18, -24, -18],
-     [13, 20, 17]
-   ]
- >,
- #Nx.Tensor<
-   s64[3][3]
-   [
-     [-13, -20, -17],
-     [-18, -24, -18],
-     [12, 20, 17]
-   ]
- >}
-```
-
 <!-- livebook:{"reevaluate_automatically":true} -->
 
 ```elixir
@@ -672,23 +522,6 @@ crowdedness_view =
 
 crowdedness_view |> Kino.VegaLite.push_many(board_to_dataset.(crowdedness))
 crowdedness_view |> Kino.render()
-:ok
-```
-
-```output
-#Nx.Tensor<
-  f32[15][15]
-  [
-    [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-    [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-    [0.0, 0.0, 1.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0, 2.0, 1.0, 0.0, 0.0],
-    [0.0, 0.0, 2.0, 3.5, 3.5, ...],
-    ...
-  ]
->
-```
-
-```output
 :ok
 ```
 
@@ -717,23 +550,6 @@ survivors_view |> Kino.render()
 :ok
 ```
 
-```output
-#Nx.Tensor<
-  f32[15][15]
-  [
-    [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-    [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-    [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0],
-    [0.0, 0.0, 0.0, 1.0, 1.0, ...],
-    ...
-  ]
->
-```
-
-```output
-:ok
-```
-
 Let's define how fast we want our simulation to run.
 
 A default of 5-ticks-per-second works well for watching simulations unfold, but feel free to tune to your tastes!
@@ -750,16 +566,6 @@ tick_rate_ms =
 
 IO.puts("Simulation will run at a speed of #{tick_rate_ms} milliseconds per tick")
 ```
-
-```output
-Simulation will run at a speed of 200 milliseconds per tick
-```
-
-```output
-:ok
-```
-
-<!-- livebook:{"reevaluate_automatically":true} -->
 
 ```elixir
 kernel =
@@ -792,9 +598,5 @@ Kino.VegaLite.periodically(live_view, tick_rate_ms, initial_board, fn board ->
 end)
 
 Kino.render(live_view)
-:ok
-```
-
-```output
 :ok
 ```
