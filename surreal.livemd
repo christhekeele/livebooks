@@ -2812,5 +2812,15 @@ nine |> to_number
 
 ## Resources
 
+### References
+
 * [Wikipedia](https://en.wikipedia.org/wiki/Surreal_number)
-* [Useful Julia reference implementation](https://github.com/mroughan/SurrealNumbers.jl)
+
+### Papers
+
+* **[Surreal Numbers](https://people.math.harvard.edu/~knill/teaching/mathe320_2015_fall/blog15/surreal1.pdf)** — a introductory Socratic dialogue by *Donald Knuth*
+* **[Surreal Numbers — An Introduction](https://www.tondering.dk/download/sur16.pdf)** — A deeper set-theory driven introduction by *Claus Tøndering*
+
+### Implementations
+
+* **[Well-documented Julia implementation](https://github.com/mroughan/SurrealNumbers.jl)** by *[@mroughan](https://github.com/mroughan)*
