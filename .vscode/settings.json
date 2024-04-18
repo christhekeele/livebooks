@@ -1,0 +1,9 @@
+{
+  "files.trimFinalNewlines": true,
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "editor.formatOnSave": true,
+  "elixirLS.enableTestLenses": true,
+  "elixirLS.fetchDeps": true,
+  "elixirLS.mixEnv": "test"
+}
