@@ -8,11 +8,16 @@ defmodule Livebooks.MixProject do
     "livebooks/life.livemd": [
       filename: "game-of-life",
       title: "Conway's Game of Life"
+    ],
+    "livebooks/surreal.livemd": [
+      filename: "surreal-numbers",
+      title: "Surreal Numbers"
     ]
   ]
   @groups_for_extras [
     Experiments: [
-      "livebooks/life.livemd"
+      "livebooks/life.livemd",
+      "livebooks/surreal.livemd"
     ]
   ]
   @groups_for_modules [
@@ -184,6 +189,14 @@ defmodule Livebooks.MixProject do
             border-radius: 100%;
             max-width: 64px;
             max-height: 64px;
+          }
+
+          .sidebar .sidebar-projectVersion {
+            display: none;
+          }
+
+          .content-inner pre code {
+            font-family: Menlo, Courier, monospace !important;
           }
         </style>
 

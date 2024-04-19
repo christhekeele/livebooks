@@ -48,17 +48,17 @@ GoL asks us to consider a grid of cells. Each cell can be alive or dead. Each ti
 For the purposes of our game, a "neighbour" is any of the **eight** cells surrounding a cell: up, down, left, right, or diagonal. So given cell `C`, its neighbours are the cells labelled `n`:
 
 ```
-╔══╦═══╦═══╦═══╦══╗
-║  ║   ║   ║   ║  ║
-╠══╬═══╬═══╬═══╬══╣
-║  ║ n ║ n ║ n ║  ║
-╠══╬═══╬═══╬═══╬══╣
-║  ║ n ║ C ║ n ║  ║
-╠══╬═══╬═══╬═══╬══╣
-║  ║ n ║ n ║ n ║  ║
-╠══╬═══╬═══╬═══╬══╣
-║  ║   ║   ║   ║  ║
-╚══╩═══╩═══╩═══╩══╝
+╔═══╦═══╦═══╦═══╦═══╗
+║   ║   ║   ║   ║   ║
+╠═══╬═══╬═══╬═══╬═══╣
+║   ║ n ║ n ║ n ║   ║
+╠═══╬═══╬═══╬═══╬═══╣
+║   ║ n ║ C ║ n ║   ║
+╠═══╬═══╬═══╬═══╬═══╣
+║   ║ n ║ n ║ n ║   ║
+╠═══╬═══╬═══╬═══╬═══╣
+║   ║   ║   ║   ║   ║
+╚═══╩═══╩═══╩═══╩═══╝
 ```
 
 ### Nx
