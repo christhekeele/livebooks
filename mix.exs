@@ -61,24 +61,41 @@ defmodule Livebooks.MixProject do
     ]
 
   def cli do
-    test_by_default = aliases() |> Keyword.keys() |> Map.new(&{&1, :test})
-    doc_overrides = [:build, :docs, :static] |> Map.new(&{&1, :docs})
+    test_tasks =
+      [
+        :check,
+        :lint,
+        :"lint.compile",
+        :"lint.deps",
+        :"lint.format",
+        :"lint.style",
+        :typecheck,
+        :"typecheck.build-cache",
+        :"typecheck.clean",
+        :"typecheck.explain",
+        :"typecheck.run",
+        :"test.coverage",
+        :"test.coverage.report"
+      ]
+      |> Map.new(&{&1, :test})
+
+    doc_tasks = [:build, :docs, :static, :"hex.publish"] |> Map.new(&{&1, :docs})
 
     preferred_envs =
-      test_by_default
-      |> Map.merge(doc_overrides)
+      %{}
+      |> Map.merge(test_tasks)
+      |> Map.merge(doc_tasks)
       |> Map.to_list()
 
     [
-      default_task: "docs",
+      default_env: :dev,
       preferred_envs: preferred_envs
     ]
   end
 
-  def application(),
-    do: [
-      extra_application: [:logger]
-    ]
+  def application() do
+    [extra_application: [:logger], mod: {Livebook, []}]
+  end
 
   defp aliases,
     do: [
@@ -151,6 +168,8 @@ defmodule Livebooks.MixProject do
 
   defp deps(),
     do: [
+      {:matcha, "~> 0.1", github: "christhekeele/matcha", branch: "latest"},
+      # Site generation
       {:ex_doc, "~> 0.32", only: @doc_envs, runtime: false},
       # Static analysis
       {:credo, "~> 1.7", only: @dev_envs, runtime: false},

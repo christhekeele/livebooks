@@ -1,31 +1,70 @@
-# Surreal Numbers
+# Surreal Numbers in Elixir
 
 ```elixir
-Mix.install([
-  {:ets, "~> 0.9.0"},
-  {:eternal, "~> 1.2"}
-])
+Mix.install(
+  [
+    {:ets, "~> 0.9.0"},
+    {:eternal, "~> 1.2"},
+    # {:livebooks, github: "christhekeele/livebooks", branch: "latest"}
+    {:livebooks, path: "/Users/keele/Projects/personal/livebooks"}
+  ],
+  force: true
+)
+```
 
-require Logger
+## Video Format
 
-defmodule Surreal.Guards do
-  defguard is_set(surreals) when is_list(surreals)
+[Watch the ElixirConf 2022 lightning talk here!](https://www.youtube.com/watch?v=f1lNK5gDlwA&t=235s)
 
-  defguard is_surreal(surreal) when is_tuple(surreal) and tuple_size(surreal) == 2
+## Representation
+
+How do surreal numbers work? Let's build up a little intuition by representing them in Elixir.
+
+First, let's bring in some `Livebook.Helpers` that will let us iteratively build up a module to represent them.
+
+```elixir
+use Livebook.Helpers
+
+defmodule Foo, v: 1 do
+  def hello, do: :world
 end
 
+defmodule Foo, v: 2, debug: true do
+  defoverridable hello: 0
+  def hello, do: :"livebook_#{super()}"
+end
+
+Foo.hello()
+```
+
+Surreal numbers are represented by a left set and a right set, where each set contains other full surreal numbers. For the purposes of this experiment, we'll just use a list to represent sets, and a tuple `{left_set, right_set}` to represent a single surreal.
+
+```elixir
+defmodule Surreal.Guards do
+  defguard is_set(surreals) when is_list(surreals)
+  defguard is_surreal(surreal) when is_tuple(surreal) and tuple_size(surreal) == 2
+end
+```
+
+## Caching
+
+Surreal numbers are a worst-case scenario for computation: as we will see, every numerical operation on a single number `{left, right}` requires recursive operations on each of its sets, sometimes to a disaterous degree.
+
+To try to minimize this computation, we will do some very naive caching of every calculation in `:ets`.
+
+```elixir
 defmodule Surreal.Cache do
-  @name __MODULE__
+  @table_name __MODULE__
 
   def init() do
-    ETS.KeyValueSet.new!(name: @name, protection: :public)
+    ETS.KeyValueSet.new!(name: @table_name, protection: :public)
   end
 
   defp cache() do
-    ETS.KeyValueSet.wrap_existing!(@name)
+    ETS.KeyValueSet.wrap_existing!(@table_name)
   end
 
-  def fetch(key) do
+  def get(key) do
     ETS.KeyValueSet.get!(cache(), key)
   end
 
@@ -35,7 +74,7 @@ defmodule Surreal.Cache do
 
   @spec try(any, any) :: any
   def try(key, value_fun) do
-    cached = fetch(key)
+    cached = get(key)
 
     if cached do
       cached
@@ -49,10 +88,6 @@ end
 
 Surreal.Cache.init()
 ```
-
-## Video Format
-
-[Watch the ElixirConf 2022 lightning talk here!](https://www.youtube.com/watch?v=f1lNK5gDlwA&t=235s)
 
 ## Axioms
 
@@ -96,25 +131,22 @@ five_eighths = {[one_half], [three_quarters]}
 ## Module
 
 ```elixir
-defmodule Surreal do
-  import Kernel, except: [-: 1, +: 2, -: 2, *: 2, /: 2, <>: 2]
-  import Surreal.Guards
+defmodule Surreal, v: 1 do
+  @empty_set []
+  @zero {@empty_set, @empty_set}
+  @one {[@zero], @empty_set}
 
-  @zero {[], []}
-  @one {[{[], []}], []}
+  IO.inspect(@zero)
+  IO.inspect(@one)
 end
 ```
 
 ## Set Concatenation
 
 ```elixir
-defmodule Surreal do
-  import Kernel, except: [-: 1, +: 2, -: 2, *: 2, /: 2, <>: 2]
+defmodule Surreal, v: 2 do
+  import Kernel, except: [<>: 2]
   import Surreal.Guards
-
-  @empty_set []
-  @zero {@empty_set, @empty_set}
-  @one {[@zero], @empty_set}
 
   # Set concatenation
 
@@ -135,13 +167,9 @@ end
 ## Surreal Math
 
 ```elixir
-defmodule Surreal do
+defmodule Surreal, v: 3 do
   import Kernel, except: [-: 1, +: 2, -: 2, *: 2, /: 2, <>: 2]
   import Surreal.Guards
-
-  @empty_set []
-  @zero {@empty_set, @empty_set}
-  @one {[@zero], @empty_set}
 
   @doc """
   Negates a surreal number.
@@ -245,44 +273,32 @@ defmodule Surreal do
   def surreals1 * surreals2 when is_set(surreals1) and is_set(surreals2) do
     Enum.uniq(Enum.flat_map(surreals1, &__MODULE__.*(&1, surreals2)))
   end
-
-  # Set concatenation
-
-  def @empty_set <> surreals when is_set(surreals) do
-    surreals
-  end
-
-  def surreals <> @empty_set when is_set(surreals) do
-    surreals
-  end
-
-  def surreals1 <> surreals2 when is_set(surreals1) and is_set(surreals2) do
-    Enum.uniq(surreals1 ++ surreals2)
-  end
 end
 ```
 
 ## Deriving numbers
 
 ```elixir
-import Kernel, except: [-: 1, +: 2, -: 2, *: 2, /: 2, <>: 2]
-import Surreal
+# import Kernel, except: [-: 1, +: 2, -: 2, *: 2, /: 2, <>: 2]
+# import Surreal
 
-IO.inspect("zero + one == one")
-(zero + one) |> IO.inspect()
-one |> IO.inspect()
+# IO.inspect("zero + one == one")
+# (zero + one) |> IO.inspect()
+# one |> IO.inspect()
 
-IO.inspect("one + one == two")
-(one + one) |> IO.inspect()
-two |> IO.inspect()
+# IO.inspect("one + one == two")
+# (one + one) |> IO.inspect()
+# two |> IO.inspect()
 
-IO.inspect("zero - one == neg_one")
-(zero - one) |> IO.inspect()
-neg_one |> IO.inspect()
+# IO.inspect("zero - one == neg_one")
+# (zero - one) |> IO.inspect()
+# neg_one |> IO.inspect()
 
-IO.inspect("neg_one - one == neg_two")
-(neg_one - one) |> IO.inspect()
-neg_two |> IO.inspect()
+# IO.inspect("neg_one - one == neg_two")
+# (neg_one - one) |> IO.inspect()
+# neg_two |> IO.inspect()
+
+# Surreal
 ```
 
 ## Performing Multiplication
@@ -290,13 +306,7 @@ neg_two |> IO.inspect()
 ```elixir
 require Logger
 
-defmodule Surreal do
-  import Kernel, except: [-: 1, +: 2, -: 2, *: 2, /: 2, <>: 2]
-  import Surreal.Guards
-
-  @zero {[], []}
-  @one {[{[], []}], []}
-
+defmodule Surreal, v: 4 do
   @doc """
   Converts a number to a surreal number.
 
@@ -373,151 +383,6 @@ defmodule Surreal do
         end
       end)
     end
-  end
-
-  @doc """
-  Concatenates two sets of surreals.
-  """
-
-  def [] <> surreals when is_set(surreals) do
-    surreals
-  end
-
-  def surreals <> [] when is_set(surreals) do
-    surreals
-  end
-
-  def surreals1 <> surreals2 when is_set(surreals1) and is_set(surreals2) do
-    Enum.uniq(surreals1 ++ surreals2)
-  end
-
-  @doc """
-  Negates a surreal number.
-  """
-
-  def -@zero do
-    @zero
-  end
-
-  def -surreal when is_surreal(surreal) do
-    Logger.debug("negating: `#{inspect(surreal)}`")
-
-    Surreal.Cache.try({:-, surreal}, fn ->
-      {left, right} = surreal
-      {-right, -left}
-    end)
-  end
-
-  def -surreals when is_set(surreals) do
-    Enum.map(surreals, &-/1)
-  end
-
-  @doc """
-  Adds two surreal numbers.
-  """
-
-  def @zero + @zero do
-    @zero
-  end
-
-  def surreal1 + surreal2 when is_surreal(surreal1) and is_surreal(surreal2) do
-    Logger.debug("adding: `#{inspect(surreal1)} + #{inspect(surreal2)}`")
-
-    Surreal.Cache.try({:+, surreal1, surreal2}, fn ->
-      {left1, right1} = surreal1
-      {left2, right2} = surreal2
-
-      left = (left1 + surreal2) <> (left2 + surreal1)
-      right = (right1 + surreal2) <> (right2 + surreal1)
-      {left, right}
-    end)
-  end
-
-  def surreals + surreal when is_set(surreals) and is_surreal(surreal) do
-    Enum.uniq(Enum.map(surreals, &__MODULE__.+(&1, surreal)))
-  end
-
-  def surreal + surreals when is_set(surreals) and is_surreal(surreal) do
-    Enum.uniq(Enum.map(surreals, &__MODULE__.+(surreal, &1)))
-  end
-
-  def surreals1 + surreals2 when is_set(surreals1) and is_set(surreals2) do
-    Enum.uniq(Enum.flat_map(surreals1, &__MODULE__.+(&1, surreals2)))
-  end
-
-  @doc """
-  Subtracts two surreal numbers.
-  """
-
-  def surreal1 - surreal2 when is_surreal(surreal1) and is_surreal(surreal2) do
-    Logger.debug("subtracting: `#{inspect(surreal1)} - #{inspect(surreal2)}`")
-
-    Surreal.Cache.try({:-, surreal1, surreal2}, fn ->
-      surreal1 + -surreal2
-    end)
-  end
-
-  def surreals - surreal when is_set(surreals) and is_surreal(surreal) do
-    Enum.uniq(Enum.map(surreals, &__MODULE__.-(&1, surreal)))
-  end
-
-  def surreal - surreals when is_set(surreals) and is_surreal(surreal) do
-    Enum.uniq(Enum.map(surreals, &__MODULE__.-(surreal, &1)))
-  end
-
-  def surreals1 - surreals2 when is_set(surreals1) and is_set(surreals2) do
-    Enum.uniq(Enum.flat_map(surreals1, &__MODULE__.-(&1, surreals2)))
-  end
-
-  @doc """
-  Multiplies two surreal numbers.
-  """
-
-  def @zero * surreal when is_surreal(surreal) do
-    @zero
-  end
-
-  def surreal * @zero when is_surreal(surreal) do
-    @zero
-  end
-
-  def @one * surreal when is_surreal(surreal) do
-    surreal
-  end
-
-  def surreal * @one when is_surreal(surreal) do
-    surreal
-  end
-
-  def surreal1 * surreal2 when is_surreal(surreal1) and is_surreal(surreal2) do
-    Logger.debug("multiplying: `#{inspect(surreal1)} * #{inspect(surreal2)}`")
-
-    Surreal.Cache.try({:*, surreal1, surreal2}, fn ->
-      {left1, right1} = surreal1
-      {left2, right2} = surreal2
-
-      left =
-        (left1 * surreal2 + surreal1 * left2 - left1 * left2) <>
-          (right1 * surreal2 + surreal1 * right2 - right1 * right2)
-
-      right =
-        (left1 * surreal2 + surreal1 * right2 - left1 * right2) <>
-          (surreal1 * left2 + right1 * surreal2 - right1 * left2)
-
-      {left, right}
-    end)
-  end
-
-  def surreals * surreal when is_set(surreals) and is_surreal(surreal) do
-    Enum.uniq(Enum.map(surreals, &__MODULE__.*(&1, surreal)))
-  end
-
-  def surreal * surreals when is_set(surreals) and is_surreal(surreal) do
-    Enum.uniq(Enum.map(surreals, &__MODULE__.*(surreal, &1)))
-  end
-
-  def surreals1 * surreals2 when is_set(surreals1) and is_set(surreals2) do
-    Enum.uniq(Enum.flat_map(surreals1, &__MODULE__.*(&1, surreals2)))
   end
 end
 ```
