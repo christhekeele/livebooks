@@ -25,12 +25,9 @@ livebooks-*.tar
 # Temporary files, for example, from tests.
 /tmp/
 
-/build/
+# Where our actual built site resides (build via "mix build").
+/site/
 
-# /doc/assets/
-# /doc/dist
-# /doc/*.epub
-# /doc/*.html
-# /doc/*.md
-# /doc/*.livemd
-# /doc/*.cheatmd
+# Dialyzer PLT caches
+/priv/plts/*.plt
+/priv/plts/*.plt.hash
