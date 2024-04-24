@@ -1,10 +1,10 @@
-defmodule Livebooks.MixProject do
+defmodule Livebook.MixProject do
   use Mix.Project
 
-  @app :livebooks
+  @app :livebook
   @name "Chris Keele's Livebooks"
 
-  @livebooks [
+  @extras [
     "livebooks/life.livemd": [
       filename: "game-of-life",
       title: "Conway's Game of Life"
@@ -168,7 +168,7 @@ defmodule Livebooks.MixProject do
 
   defp deps(),
     do: [
-      {:matcha, "~> 0.1", github: "christhekeele/matcha", branch: "latest"},
+      {:matcha, "~> 0.1"},
       # Site generation
       {:ex_doc, "~> 0.32", only: @doc_envs, runtime: false},
       # Static analysis
@@ -194,7 +194,7 @@ defmodule Livebooks.MixProject do
       logo: "images/logo.png",
       # cover: "docs/img/cover.png",
       extras:
-        @livebooks ++
+        @extras ++
           [
             "README.md": [filename: "home", title: "Home"],
             "LICENSE.md": [filename: "license", title: "License"]

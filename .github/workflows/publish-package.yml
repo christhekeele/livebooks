@@ -1,0 +1,78 @@
+name: Publish ❯ Package
+# Generates and publishes package
+
+on:
+  workflow_dispatch:
+    # inputs:
+    #   version:
+    #     description: 'Version number to publish'
+    #     type: string
+    #     required: true
+    #   prerelease:
+    #     description: 'Is this a prerelease?'
+    #     type: boolean
+    #     required: true
+    #     default: true
+    #   suffix:
+    #     description: 'Prerelease suffix to append if enabled'
+    #     type: string
+    #     required: false
+    #     default: dev
+
+  push:
+    branches: ["latest"]
+
+concurrency:
+  group: publish-package-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  package-name: livebook
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_ENDPOINT_URL_S3: ${{ secrets.AWS_ENDPOINT_URL_S3 }}
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
+
+jobs:
+  build-and-publish:
+    name: Build and Publish Package
+    runs-on: ${{ vars.PREFERRED_OS }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Erlang & Elixir
+        id: beam-versions
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ vars.PREFERRED_ELIXIR }}
+          otp-version: ${{ vars.PREFERRED_OTP }}
+
+      - name: Determine version as `steps.publish-version.number`
+        id: publish-version
+        run: echo "number=$( head -n1 VERSION | xargs echo -n | cat - <(echo -n "-dev") )" >> $GITHUB_OUTPUT
+
+      - name: Update VERSION file
+        run: echo "${{ steps.publish-version.outputs.number }}" | tee VERSION
+
+      - name: Build package
+        run: mix hex.build
+
+      - name: Upload built package to private hex registry
+        run: aws s3 cp *.tar s3://${{ env.BUCKET_NAME }}/tarballs/
+
+      - name: Notify registry of new package
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.HEX_REGISTRY_REPO_ACCESS_TOKEN }}
+          repository: christhekeele/hex-registry
+          event-type: update-registry
+          client-payload: |-
+            {
+              "repo": "${{ github.repository }}",
+              "package": "${{ env.package-name }}",
+              "version": "${{ steps.publish-version.outputs.number }}",
+              "ref": "${{ github.ref }}",
+              "sha": "${{ github.sha }}"
+            }

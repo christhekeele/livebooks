@@ -60,7 +60,7 @@ jobs:
       - name: Build site
         run: mix build
 
-      - name: Upload build static site to Github Pages
+      - name: Upload built static site to Github Pages
         uses: actions/upload-pages-artifact@v3
         with:
           path: "./site"

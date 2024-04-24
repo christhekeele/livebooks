@@ -3,10 +3,9 @@
 ```elixir
 Mix.install(
   [
-    {:ets, "~> 0.9.0"},
-    {:eternal, "~> 1.2"},
-    # {:livebooks, github: "christhekeele/livebooks", branch: "latest"}
-    {:livebooks, path: "/Users/keele/Projects/personal/livebooks"}
+    # {:livebook, "~> 0.0", repo: "chriskeele"},
+    {:livebook, github: "christhekeele/livebooks", branch: "latest"}
+    # {:livebook, path: "/Users/keele/Projects/personal/livebooks"}
   ],
   force: true
 )
@@ -24,17 +23,6 @@ First, let's bring in some `Livebook.Helpers` that will let us iteratively build
 
 ```elixir
 use Livebook.Helpers
-
-defmodule Foo, v: 1 do
-  def hello, do: :world
-end
-
-defmodule Foo, v: 2, debug: true do
-  defoverridable hello: 0
-  def hello, do: :"livebook_#{super()}"
-end
-
-Foo.hello()
 ```
 
 Surreal numbers are represented by a left set and a right set, where each set contains other full surreal numbers. For the purposes of this experiment, we'll just use a list to represent sets, and a tuple `{left_set, right_set}` to represent a single surreal.
@@ -46,57 +34,14 @@ defmodule Surreal.Guards do
 end
 ```
 
-## Caching
-
-Surreal numbers are a worst-case scenario for computation: as we will see, every numerical operation on a single number `{left, right}` requires recursive operations on each of its sets, sometimes to a disaterous degree.
-
-To try to minimize this computation, we will do some very naive caching of every calculation in `:ets`.
-
-```elixir
-defmodule Surreal.Cache do
-  @table_name __MODULE__
-
-  def init() do
-    ETS.KeyValueSet.new!(name: @table_name, protection: :public)
-  end
-
-  defp cache() do
-    ETS.KeyValueSet.wrap_existing!(@table_name)
-  end
-
-  def get(key) do
-    ETS.KeyValueSet.get!(cache(), key)
-  end
-
-  def store(key, value) do
-    ETS.KeyValueSet.put!(cache(), key, value)
-  end
-
-  @spec try(any, any) :: any
-  def try(key, value_fun) do
-    cached = get(key)
-
-    if cached do
-      cached
-    else
-      value = value_fun.()
-      store(key, value)
-      value
-    end
-  end
-end
-
-Surreal.Cache.init()
-```
-
 ## Axioms
 
-* Zero
-* One
-* Negation
-* Addition
-* Multiplication
-* Division
+- Zero
+- One
+- Negation
+- Addition
+- Multiplication
+- Division
 
 ```elixir
 zero = {[], []}
