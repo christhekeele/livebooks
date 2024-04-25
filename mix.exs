@@ -3,6 +3,20 @@ defmodule Livebook.MixProject do
 
   @app :livebook
   @name "Chris Keele's Livebooks"
+  @maintainers ["Chris Keele"]
+  @licenses ["MIT"]
+
+  @homepage_domain "livebooks.chriskeele.com"
+  @homepage_url "https://#{@homepage_domain}"
+  @github_url "https://github.com/christhekeele/livebooks"
+  @github_branch "latest"
+
+  @title @name
+  @blurb "Elixir experiments, guides, and accompanying source code"
+  @description "#{@blurb} for #{@homepage_url}."
+  @blurb "#{@blurb}."
+  @splash_image "#{@homepage_url}/splash.jpg"
+  @authors ["Chris Keele"]
 
   @extras [
     "livebooks/life.livemd": [
@@ -23,15 +37,6 @@ defmodule Livebook.MixProject do
   @groups_for_modules [
     # Livebooks: ~r/^Livebooks\./
   ]
-
-  @homepage_url "https://livebooks.chriskeele.com"
-  @github_url "https://github.com/christhekeele/livebooks"
-  @github_branch "latest"
-
-  @description "My livebooks and supporting code for #{@homepage_url}."
-  @authors ["Chris Keele"]
-  @maintainers ["Chris Keele"]
-  @licenses ["MIT"]
 
   @dev_envs [:dev, :test]
   @doc_envs [:dev, :docs]
@@ -79,7 +84,7 @@ defmodule Livebook.MixProject do
       ]
       |> Map.new(&{&1, :test})
 
-    doc_tasks = [:build, :docs, :static, :"hex.publish"] |> Map.new(&{&1, :docs})
+    doc_tasks = [:"site.build", :docs, :static] |> Map.new(&{&1, :docs})
 
     preferred_envs =
       %{}
@@ -103,8 +108,11 @@ defmodule Livebook.MixProject do
       # Developer tools
       ###
 
+      # Build tasks
+      build: ["site.build", "hex.build"],
+
       # Build through ex_doc
-      build: ["docs"],
+      "site.build": ["docs", "static"],
 
       # Combination clean utility
       clean: [
@@ -112,9 +120,6 @@ defmodule Livebook.MixProject do
         "typecheck.clean",
         &clean_build_folders/1
       ],
-
-      # Ensure hex.publish also adds static files
-      docs: ["docs", "static"],
 
       # Installation tasks
       install: [
@@ -192,7 +197,7 @@ defmodule Livebook.MixProject do
       api_reference: false,
       extra_section: "LIVEBOOKS",
       logo: "images/logo.png",
-      # cover: "docs/img/cover.png",
+      # cover: "images/livebooks.jpg",
       extras:
         @extras ++
           [
@@ -237,6 +242,67 @@ defmodule Livebook.MixProject do
         <meta name="msapplication-TileColor" content="#6932a8">
         <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
         <meta name="theme-color" content="#6932a8">
+
+        <meta name="description" content="#{@title}: #{@blurb}" />
+
+        <!-- Facebook Meta Tags -->
+        <meta
+          name="og:url"
+          property="og:url"
+          content="#{@homepage_url}"
+        />
+        <meta
+          name="og:type"
+          property="og:type"
+          content="website"
+        />
+        <meta
+          name="og:title"
+          property="og:title"
+          content="#{@title}"
+        />
+        <meta
+          name="og:description"
+          property="og:description"
+          content="#{@blurb}"
+        />
+        <meta
+          name="og:image"
+          property="og:image"
+          content="#{@splash_image}"
+        />
+
+        <!-- Twitter Meta Tags -->
+        <meta
+          name="twitter:card"
+          property="twitter:card"
+          content="summary_large_image"
+        />
+        <meta
+          name="twitter:domain"
+          property="twitter:domain"
+          content="#{@homepage_domain}"
+        />
+        <meta
+          name="twitter:url"
+          property="twitter:url"
+          content="#{@homepage_url}"
+        />
+        <meta
+          name="twitter:title"
+          property="twitter:title"
+          content="#{@title}"
+        />
+        <meta
+          name="twitter:description"
+          property="twitter:description"
+          content="#{@blurb}"
+        />
+        <meta
+          name="twitter:image"
+          property="twitter:image"
+          content="#{@splash_image}"
+        />
         """
       end,
       before_closing_body_tag: fn _ ->

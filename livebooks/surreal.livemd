@@ -1,11 +1,15 @@
 # Surreal Numbers in Elixir
 
 ```elixir
+System.cmd("mix", ~w[hex.repo add christhekeele https://hex.chriskeele.com])
+
 Mix.install(
   [
-    # {:livebook, "~> 0.0", repo: "chriskeele"},
-    {:livebook, github: "christhekeele/livebooks", branch: "latest"}
-    # {:livebook, path: "/Users/keele/Projects/personal/livebooks"}
+    {:ets, "~> 0.9.0"},
+    {:eternal, "~> 1.2"},
+    # {:livebooks, github: "christhekeele/livebooks", branch: "latest"},
+    {:livebook, "~> 0.0.1-dev", repo: "christhekeele"}
+    # {:livebooks, path: "/Users/keele/Projects/personal/livebooks"},
   ],
   force: true
 )
@@ -36,12 +40,12 @@ end
 
 ## Axioms
 
-- Zero
-- One
-- Negation
-- Addition
-- Multiplication
-- Division
+* Zero
+* One
+* Negation
+* Addition
+* Multiplication
+* Division
 
 ```elixir
 zero = {[], []}

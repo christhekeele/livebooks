@@ -9,6 +9,7 @@ on:
 
 env:
   MIX_ENV: test
+  MIX_TARGET: ci
 
 concurrency:
   group: test-suite-${{ github.ref }}
@@ -75,7 +76,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: deps
-          key: cache-${{ vars.CACHE_VERSION }}-os-${{ runner.os }}-otp-${{ steps.beam-versions.outputs.otp-version }}-elixir-${{ steps.beam-versions.outputs.elixir-version }}-mix-deps-get-mix-lock-file-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+          key: cache-${{ vars.CACHE_VERSION }}-os-${{ runner.os }}-otp-${{ steps.beam-versions.outputs.otp-version }}-elixir-${{ steps.beam-versions.outputs.elixir-version }}-env-${{ env.MIX_ENV }}-target-${{ env.MIX_TARGET }}-mix-deps-get-mix-lock-file-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
 
       - name: Install mix dependencies
         if: steps.mix-deps-get-cache.outputs.cache-hit != 'true'
@@ -86,7 +87,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: _build
-          key: cache-${{ vars.CACHE_VERSION }}-os-${{ runner.os }}-otp-${{ steps.beam-versions.outputs.otp-version }}-elixir-${{ steps.beam-versions.outputs.elixir-version }}-mix-deps-compile-mix-lock-file-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+          key: cache-${{ vars.CACHE_VERSION }}-os-${{ runner.os }}-otp-${{ steps.beam-versions.outputs.otp-version }}-elixir-${{ steps.beam-versions.outputs.elixir-version }}-env-${{ env.MIX_ENV }}-target-${{ env.MIX_TARGET }}-mix-deps-compile-mix-lock-file-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
 
       - name: Compile mix dependencies
         if: steps.mix-deps-compile-cache.outputs.cache-hit != 'true'
@@ -97,7 +98,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: priv/plts
-          key: cache-${{ vars.CACHE_VERSION }}-os-${{ runner.os }}-otp-${{ steps.beam-versions.outputs.otp-version }}-elixir-${{ steps.beam-versions.outputs.elixir-version }}-mix-typecheck
+          key: cache-${{ vars.CACHE_VERSION }}-os-${{ runner.os }}-otp-${{ steps.beam-versions.outputs.otp-version }}-elixir-${{ steps.beam-versions.outputs.elixir-version }}-env-${{ env.MIX_ENV }}-target-${{ env.MIX_TARGET }}-mix-typecheck
 
       - name: Setup typechecking
         if: steps.mix-typecheck-cache.outputs.cache-hit != 'true'
@@ -125,7 +126,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: deps
-          key: cache-${{ vars.CACHE_VERSION }}-os-${{ runner.os }}-otp-${{ steps.beam-versions.outputs.otp-version }}-elixir-${{ steps.beam-versions.outputs.elixir-version }}-mix-deps-get-mix-lock-file-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+          key: cache-${{ vars.CACHE_VERSION }}-os-${{ runner.os }}-otp-${{ steps.beam-versions.outputs.otp-version }}-elixir-${{ steps.beam-versions.outputs.elixir-version }}-env-${{ env.MIX_ENV }}-target-${{ env.MIX_TARGET }}-mix-deps-get-mix-lock-file-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
 
       - name: Install mix dependencies
         if: steps.mix-deps-get-cache.outputs.cache-hit != 'true'
@@ -136,7 +137,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: _build
-          key: cache-${{ vars.CACHE_VERSION }}-os-${{ runner.os }}-otp-${{ steps.beam-versions.outputs.otp-version }}-elixir-${{ steps.beam-versions.outputs.elixir-version }}-mix-deps-compile-mix-lock-file-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+          key: cache-${{ vars.CACHE_VERSION }}-os-${{ runner.os }}-otp-${{ steps.beam-versions.outputs.otp-version }}-elixir-${{ steps.beam-versions.outputs.elixir-version }}-env-${{ env.MIX_ENV }}-target-${{ env.MIX_TARGET }}-mix-deps-compile-mix-lock-file-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
 
       - name: Compile mix dependencies
         if: steps.mix-deps-compile-cache.outputs.cache-hit != 'true'

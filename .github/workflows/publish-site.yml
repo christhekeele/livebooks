@@ -11,6 +11,10 @@ concurrency:
   group: publish-site-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  MIX_ENV: docs
+  MIX_TARGET: ci
+
 jobs:
   build-and-publish:
     name: Build and Publish Site
@@ -40,7 +44,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: deps
-          key: cache-${{ vars.CACHE_VERSION }}-os-${{ runner.os }}-otp-${{ steps.beam-versions.outputs.otp-version }}-elixir-${{ steps.beam-versions.outputs.elixir-version }}-mix-deps-get-mix-lock-file-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+          key: cache-${{ vars.CACHE_VERSION }}-os-${{ runner.os }}-otp-${{ steps.beam-versions.outputs.otp-version }}-elixir-${{ steps.beam-versions.outputs.elixir-version }}-env-${{ env.MIX_ENV }}-target-${{ env.MIX_TARGET }}-mix-deps-get-mix-lock-file-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
 
       - name: Install mix dependencies
         if: steps.mix-deps-get-cache.outputs.cache-hit != 'true'
@@ -51,14 +55,14 @@ jobs:
         uses: actions/cache@v4
         with:
           path: _build
-          key: cache-${{ vars.CACHE_VERSION }}-os-${{ runner.os }}-otp-${{ steps.beam-versions.outputs.otp-version }}-elixir-${{ steps.beam-versions.outputs.elixir-version }}-mix-deps-compile-mix-lock-file-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+          key: cache-${{ vars.CACHE_VERSION }}-os-${{ runner.os }}-otp-${{ steps.beam-versions.outputs.otp-version }}-elixir-${{ steps.beam-versions.outputs.elixir-version }}-env-${{ env.MIX_ENV }}-target-${{ env.MIX_TARGET }}-mix-deps-compile-mix-lock-file-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
 
       - name: Compile mix dependencies
         if: steps.mix-deps-compile-cache.outputs.cache-hit != 'true'
         run: mix deps.compile
 
       - name: Build site
-        run: mix build
+        run: mix site.build
 
       - name: Upload built static site to Github Pages
         uses: actions/upload-pages-artifact@v3
