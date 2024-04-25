@@ -1,4 +1,4 @@
-defmodule Livebook.Cache do
+defmodule Livebooks.Cache do
   @moduledoc false
   require Matcha.Table.ETS
 

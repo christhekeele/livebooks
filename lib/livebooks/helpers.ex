@@ -1,10 +1,10 @@
-defmodule Livebook.Helpers do
+defmodule Livebooks.Helpers do
   @moduledoc """
   Common helpers for these livebooks.
 
-  > #### `use Livebook.Helpers` {: .info}
+  > #### `use Livebooks.Helpers` {: .info}
   >
-  > When you `use Livebook.Helpers`, the following will be
+  > When you `use Livebooks.Helpers`, the following will be
   > imported into your livebook:
   >
   > - `defmodule/3`: an iterable version of `defmodule/2`
@@ -13,7 +13,7 @@ defmodule Livebook.Helpers do
 
   defmacro __using__(_opts \\ []) do
     quote do
-      import Livebook.Helpers, only: [defmodule: 3, cached: 2]
+      import Livebooks.Helpers, only: [defmodule: 3, cached: 2]
     end
   end
 
@@ -99,10 +99,10 @@ defmodule Livebook.Helpers do
     version = Macro.expand(version, __CALLER__)
     version_namespace = "__v#{version}" |> String.to_atom()
     module_version = module_alias |> Module.concat(version_namespace)
-    Livebook.Module.add_version(module_alias, version, block)
+    Livebooks.Module.add_version(module_alias, version, block)
 
     module_code =
-      Livebook.Module.history(module_alias, version)
+      Livebooks.Module.history(module_alias, version)
       |> Macro.prewalk(fn
         # Re-anchor any references to the module alias,
         #  overwriting the post-module-def re-aliasing,
@@ -130,10 +130,10 @@ defmodule Livebook.Helpers do
   end
 
   def cached(key, value_fun) do
-    if cached = Livebook.Cache.lookup(key) do
+    if cached = Livebooks.Cache.lookup(key) do
       cached
     else
-      Livebook.Cache.store(key, value_fun.())
+      Livebooks.Cache.store(key, value_fun.())
     end
   end
 end

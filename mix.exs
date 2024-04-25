@@ -1,11 +1,11 @@
-defmodule Livebook.MixProject do
+defmodule Livebooks.MixProject do
   use Mix.Project
 
   ####
   # Package stuff
   ##
 
-  @app :livebook
+  @app :livebooks
   @name "Chris Keele's Livebooks"
   @maintainers ["Chris Keele"]
   @licenses ["MIT"]
@@ -30,19 +30,19 @@ defmodule Livebook.MixProject do
   @authors ["Chris Keele"]
 
   @extras [
-    "livebooks/life.livemd": [
-      filename: "game-of-life",
+    "livebooks/conways-game-of-life.livemd": [
+      filename: "conways-game-of-life",
       title: "Conway's Game of Life"
     ],
-    "livebooks/surreal.livemd": [
+    "livebooks/surreal-numbers.livemd": [
       filename: "surreal-numbers",
       title: "Surreal Numbers"
     ]
   ]
   @groups_for_extras [
     Experiments: [
-      "livebooks/life.livemd",
-      "livebooks/surreal.livemd"
+      "livebooks/conways-game-of-life.livemd",
+      "livebooks/surreal-numbers.livemd"
     ]
   ]
   @groups_for_modules [
@@ -116,7 +116,7 @@ defmodule Livebook.MixProject do
   end
 
   def application() do
-    [extra_application: [:logger], mod: {Livebook, []}]
+    [extra_application: [:logger], mod: {Livebooks, []}]
   end
 
   defp aliases,

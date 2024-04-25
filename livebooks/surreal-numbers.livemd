@@ -26,14 +26,17 @@ Mix.install(
 
 How do surreal numbers work? Let's build up a little intuition by representing them in Elixir.
 
-First, let's bring in some `Livebook.Helpers` that will let us iteratively build up a module to represent them.
+First, let's bring in some `Livebooks.Helpers` that will let us iteratively build up a module to represent them.
 
 > #### Note
-> 
+>
 > This syntax will render an error block
 
+> [!WARNING]
+> Critical content demanding immediate user attention due to potential risks.
+
 ```elixir
-use Livebook.Helpers
+use Livebooks.Helpers
 ```
 
 Surreal numbers are represented by a left set and a right set, where each set contains other full surreal numbers. For the purposes of this experiment, we'll just use a list to represent sets, and a tuple `{left_set, right_set}` to represent a single surreal.
@@ -47,12 +50,12 @@ end
 
 ## Axioms
 
-* Zero
-* One
-* Negation
-* Addition
-* Multiplication
-* Division
+- Zero
+- One
+- Negation
+- Addition
+- Multiplication
+- Division
 
 ```elixir
 zero = {[], []}
