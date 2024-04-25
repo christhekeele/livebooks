@@ -1,7 +1,10 @@
 # Surreal Numbers in Elixir
 
 ```elixir
-System.cmd("mix", ~w[hex.repo add christhekeele https://hex.chriskeele.com])
+System.cmd(
+  "mix",
+  ~w[hex.repo add christhekeele https://fly.storage.tigris.dev/christhekeele-hex-registry]
+)
 
 Mix.install(
   [
@@ -24,6 +27,10 @@ Mix.install(
 How do surreal numbers work? Let's build up a little intuition by representing them in Elixir.
 
 First, let's bring in some `Livebook.Helpers` that will let us iteratively build up a module to represent them.
+
+> #### Note
+> 
+> This syntax will render an error block
 
 ```elixir
 use Livebook.Helpers

@@ -1,0 +1,4 @@
+<!-- ExDoc footer content modification -->
+<script>
+  document.getElementsByTagName('footer')[0].children[0].remove();
+</script>

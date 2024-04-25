@@ -1,15 +1,26 @@
 defmodule Livebook.MixProject do
   use Mix.Project
 
+  ####
+  # Package stuff
+  ##
+
   @app :livebook
   @name "Chris Keele's Livebooks"
   @maintainers ["Chris Keele"]
   @licenses ["MIT"]
 
-  @homepage_domain "livebooks.chriskeele.com"
-  @homepage_url "https://#{@homepage_domain}"
   @github_url "https://github.com/christhekeele/livebooks"
   @github_branch "latest"
+
+  @version "VERSION" |> File.read!() |> String.trim() |> Version.parse!()
+
+  ####
+  # Site stuff
+  ##
+
+  @homepage_domain "livebooks.chriskeele.com"
+  @homepage_url "https://#{@homepage_domain}"
 
   @title @name
   @blurb "Elixir experiments, guides, and accompanying source code"
@@ -38,10 +49,16 @@ defmodule Livebook.MixProject do
     # Livebooks: ~r/^Livebooks\./
   ]
 
+  ####
+  # Build stuff
+  ##
+
   @dev_envs [:dev, :test]
   @doc_envs [:dev, :docs]
 
-  @version "VERSION" |> File.read!() |> String.trim() |> Version.parse!()
+  # Capture module attributes to render EEx templates later
+  @assigns Module.attributes_in(__MODULE__)
+           |> Enum.map(&{&1, Module.get_attribute(__MODULE__, &1)})
 
   def project,
     do: [
@@ -109,7 +126,10 @@ defmodule Livebook.MixProject do
       ###
 
       # Build tasks
-      build: ["site.build", "hex.build"],
+      build: [
+        "site.build"
+        # "hex.build" # IDK not always available
+      ],
 
       # Build through ex_doc
       "site.build": ["docs", "static"],
@@ -206,118 +226,26 @@ defmodule Livebook.MixProject do
           ],
       groups_for_modules: @groups_for_modules,
       groups_for_extras: @groups_for_extras,
-      before_closing_head_tag: fn _ ->
-        """
-        <style>
-          .sidebar .sidebar-projectImage img {
-            border-radius: 100%;
-            max-width: 64px;
-            max-height: 64px;
-          }
+      before_closing_head_tag: fn
+        :epub ->
+          ""
 
-          .sidebar .sidebar-projectVersion {
-            display: none;
-          }
-
-          .content-inner pre code {
-            font-family: Menlo, Courier, monospace !important;
-          }
-        </style>
-
-        <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
-        <link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
-        <link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
-        <link rel="apple-touch-icon" sizes="76x76" href="/apple-icon-76x76.png">
-        <link rel="apple-touch-icon" sizes="114x114" href="/apple-icon-114x114.png">
-        <link rel="apple-touch-icon" sizes="120x120" href="/apple-icon-120x120.png">
-        <link rel="apple-touch-icon" sizes="144x144" href="/apple-icon-144x144.png">
-        <link rel="apple-touch-icon" sizes="152x152" href="/apple-icon-152x152.png">
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png">
-        <link rel="icon" type="image/png" sizes="192x192"  href="/android-icon-192x192.png">
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-        <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
-        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-        <link rel="shortcut icon" href="favicon.ico">
-        <link rel="manifest" href="/manifest.json">
-        <meta name="msapplication-TileColor" content="#6932a8">
-        <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
-        <meta name="theme-color" content="#6932a8">
-
-        <meta name="description" content="#{@title}: #{@blurb}" />
-
-        <!-- Facebook Meta Tags -->
-        <meta
-          name="og:url"
-          property="og:url"
-          content="#{@homepage_url}"
-        />
-        <meta
-          name="og:type"
-          property="og:type"
-          content="website"
-        />
-        <meta
-          name="og:title"
-          property="og:title"
-          content="#{@title}"
-        />
-        <meta
-          name="og:description"
-          property="og:description"
-          content="#{@blurb}"
-        />
-        <meta
-          name="og:image"
-          property="og:image"
-          content="#{@splash_image}"
-        />
-
-        <!-- Twitter Meta Tags -->
-        <meta
-          name="twitter:card"
-          property="twitter:card"
-          content="summary_large_image"
-        />
-        <meta
-          name="twitter:domain"
-          property="twitter:domain"
-          content="#{@homepage_domain}"
-        />
-        <meta
-          name="twitter:url"
-          property="twitter:url"
-          content="#{@homepage_url}"
-        />
-        <meta
-          name="twitter:title"
-          property="twitter:title"
-          content="#{@title}"
-        />
-        <meta
-          name="twitter:description"
-          property="twitter:description"
-          content="#{@blurb}"
-        />
-        <meta
-          name="twitter:image"
-          property="twitter:image"
-          content="#{@splash_image}"
-        />
-        """
+        :html ->
+          EEx.eval_file("html/head.html.eex", assigns: @assigns)
       end,
-      before_closing_body_tag: fn _ ->
-        """
-        <script>
-        document.getElementById("modules-list-tab-button").innerHTML = "Supporting Code";
-        </script>
-        """
+      before_closing_body_tag: fn
+        :epub ->
+          ""
+
+        :html ->
+          EEx.eval_file("html/body.html.eex", assigns: @assigns)
       end,
-      before_closing_footer_tag: fn _ ->
-        """
-        <script>
-        document.getElementsByTagName('footer')[0].children[0].remove();
-        </script>
-        """
+      before_closing_footer_tag: fn
+        :epub ->
+          ""
+
+        :html ->
+          EEx.eval_file("html/footer.html.eex", assigns: @assigns)
       end
     ]
 

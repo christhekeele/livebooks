@@ -1,0 +1,4 @@
+<!-- ExDoc body content modification -->
+<script>
+  document.getElementById("modules-list-tab-button").innerHTML = "Supporting Code";
+</script>
