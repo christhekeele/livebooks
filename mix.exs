@@ -53,6 +53,8 @@ defmodule Livebooks.MixProject do
   # Build stuff
   ##
 
+  @env Mix.env()
+  @target Mix.target()
   @dev_envs [:dev, :test]
   @doc_envs [:dev, :docs]
 
@@ -66,8 +68,11 @@ defmodule Livebooks.MixProject do
       app: @app,
       elixir: "~> 1.14",
       elixirc_options: [debug_info: Mix.env() in (@doc_envs ++ @dev_envs)],
+      elixirc_paths: ["lib", "livebooks", "test"],
       start_permanent: Mix.env() == :prod,
       version: Version.to_string(@version),
+      compilers: Mix.compilers() ++ [:livebooks],
+      livebook_paths: ["livebooks"],
       # Informational
       name: @name,
       description: @description,
@@ -194,8 +199,9 @@ defmodule Livebooks.MixProject do
   defp deps(),
     do: [
       {:matcha, "~> 0.1"},
+      {:livebook, "~> 0.12", runtime: false},
       # Site generation
-      {:ex_doc, "~> 0.32", only: @doc_envs, runtime: false},
+      {:ex_doc, "~> 0.30", only: @doc_envs, runtime: false},
       # Static analysis
       {:credo, "~> 1.7", only: @dev_envs, runtime: false},
       {:dialyxir, "~> 1.4", only: @dev_envs, runtime: false, override: true},

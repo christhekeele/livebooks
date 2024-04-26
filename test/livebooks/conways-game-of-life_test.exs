@@ -1,125 +1,118 @@
-<!-- vim: set syntax=markdown: -->
+# Run as: iex --dot-iex path/to/notebook.exs
 
-# Life in Livebook & Nx
+# Title: Life in Livebook & Nx
 
-```elixir
 Mix.install([
   {:nx, "~> 0.1"},
   {:kino, "~> 0.4"},
   {:vega_lite, "~> 0.1"},
   {:kino_vega_lite, "~> 0.1"}
 ])
-```
 
-## Challenge
+# ── Challenge ──
 
-José [recently asked](https://twitter.com/josevalim/status/1476292540999647233)
-if anyone had implemented [Conway's Game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life)
-in a [Livebook](https://livebook.dev/) using [Vega-Lite](https://hexdocs.pm/kino/Kino.VegaLite.html).
+# José [recently asked](https://twitter.com/josevalim/status/1476292540999647233)
+# if anyone had implemented [Conway's Game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life)
+# in a [Livebook](https://livebook.dev/) using [Vega-Lite](https://hexdocs.pm/kino/Kino.VegaLite.html).
 
-Having only toyed around with Livebook,
-having never implemented **GoL** _(Game of Life)_,
-and having never used Kino/VegaLite,
-I thought I might also throw [Nx](https://github.com/elixir-nx/nx) _(numerical Elixir)_
-into the mix, also having no experience with it,
-and see what I could do!
+# Having only toyed around with Livebook,
+# having never implemented **GoL** _(Game of Life)_,
+# and having never used Kino/VegaLite,
+# I thought I might also throw [Nx](https://github.com/elixir-nx/nx) _(numerical Elixir)_
+# into the mix, also having no experience with it,
+# and see what I could do!
 
-So, the goal of this Livebook is to:
+# So, the goal of this Livebook is to:
 
-- Implement a GoL simulation
-- Via `Nx` matrix transforms
-- Rendered with `VegaLite`
+# * Implement a GoL simulation
+# * Via `Nx` matrix transforms
+# * Rendered with `VegaLite`
 
-Let's get cookin'!
+# Let's get cookin'!
 
-## Background
+# ── Background ──
 
-### Conway's Game of Life
+# ### Conway's Game of Life
 
-[Conway's Game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life) is the classic [cellular automata](https://en.wikipedia.org/wiki/Cellular_automaton), exploring the idea: **_can complexity organically emerge from very simple rules_**?
+# [Conway's Game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life) is the classic [cellular automata](https://en.wikipedia.org/wiki/Cellular_automaton), exploring the idea: **_can complexity organically emerge from very simple rules_**?
 
-GoL asks us to consider a grid of cells. Each cell can be alive or dead. Each tick of the simulation, each cell transforms given the following rules:
+# GoL asks us to consider a grid of cells. Each cell can be alive or dead. Each tick of the simulation, each cell transforms given the following rules:
 
-- If an alive cell is too lonely, with fewer than two alive neighbours, it dies.
-- If an alive cell is too crowded, with more than three alive neighbours, it dies.
-- An alive cell with 2 or 3 alive neighbours survives.
-- A dead cell with exactly 3 alive neighbours becomes alive.
+# * If an alive cell is too lonely, with fewer than two alive neighbours, it dies.
+# * If an alive cell is too crowded, with more than three alive neighbours, it dies.
+# * An alive cell with 2 or 3 alive neighbours survives.
+# * A dead cell with exactly 3 alive neighbours becomes alive.
 
-For the purposes of our game, a "neighbour" is any of the **eight** cells surrounding a cell: up, down, left, right, or diagonal. So given cell `C`, its neighbours are the cells labelled `n`:
+# For the purposes of our game, a "neighbour" is any of the **eight** cells surrounding a cell: up, down, left, right, or diagonal. So given cell `C`, its neighbours are the cells labelled `n`:
 
-```
-╔═══╦═══╦═══╦═══╦═══╗
-║   ║   ║   ║   ║   ║
-╠═══╬═══╬═══╬═══╬═══╣
-║   ║ n ║ n ║ n ║   ║
-╠═══╬═══╬═══╬═══╬═══╣
-║   ║ n ║ C ║ n ║   ║
-╠═══╬═══╬═══╬═══╬═══╣
-║   ║ n ║ n ║ n ║   ║
-╠═══╬═══╬═══╬═══╬═══╣
-║   ║   ║   ║   ║   ║
-╚═══╩═══╩═══╩═══╩═══╝
-```
+# ```
+# ╔═══╦═══╦═══╦═══╦═══╗
+# ║   ║   ║   ║   ║   ║
+# ╠═══╬═══╬═══╬═══╬═══╣
+# ║   ║ n ║ n ║ n ║   ║
+# ╠═══╬═══╬═══╬═══╬═══╣
+# ║   ║ n ║ C ║ n ║   ║
+# ╠═══╬═══╬═══╬═══╬═══╣
+# ║   ║ n ║ n ║ n ║   ║
+# ╠═══╬═══╬═══╬═══╬═══╣
+# ║   ║   ║   ║   ║   ║
+# ╚═══╩═══╩═══╩═══╩═══╝
+# ```
 
-### Nx
+# ### Nx
 
-[`Nx`](https://github.com/elixir-nx/nx) is Elixir's numeric computation library, notably with efficient tensor operations.
+# [`Nx`](https://github.com/elixir-nx/nx) is Elixir's numeric computation library, notably with efficient tensor operations.
 
-We'll be encoding our GoL boards as matrices, and implementing each tick of our simulation
-as a series of matrix operations upon them.
+# We'll be encoding our GoL boards as matrices, and implementing each tick of our simulation
+# as a series of matrix operations upon them.
 
-This notebook will not actually be executing these matrix transforms on a GPU,
-but it's cool to know that `Nx` has that ability!
+# This notebook will not actually be executing these matrix transforms on a GPU,
+# but it's cool to know that `Nx` has that ability!
 
-### Livebook
+# ### Livebook
 
-What you are viewing right now is a livebook; rendered by [`Livebook`](https://livebook.dev/),
-a rich interactive Elixir notebook application.
-It takes markdown files and turns them into what you are experiencing here.
+# What you are viewing right now is a livebook; rendered by [`Livebook`](https://livebook.dev/),
+# a rich interactive Elixir notebook application.
+# It takes markdown files and turns them into what you are experiencing here.
 
-### Kino
+# ### Kino
 
-[`Kino`](https://hexdocs.pm/kino/Kino.html) is a toolbelt of widgets for livebooks.
+# [`Kino`](https://hexdocs.pm/kino/Kino.html) is a toolbelt of widgets for livebooks.
 
-### VegaLite
+# ### VegaLite
 
-[Vega-Lite](https://vega.github.io/vega-lite/docs/) is a JSON-based graphic grammar.
+# [Vega-Lite](https://vega.github.io/vega-lite/docs/) is a JSON-based graphic grammar.
 
-Vega-Lite specifications consist of simple mappings of variables in a data set
-to visual encoding channels such as x, y, color, and size.
+# Vega-Lite specifications consist of simple mappings of variables in a data set
+# to visual encoding channels such as x, y, color, and size.
 
-Livebook happens to have great support for rendering Vega-Lite specification
-as graphics via [`Kino.VegaLite`](https://hexdocs.pm/kino/Kino.VegaLite.html),
-so we'll be using that to render our simulation.
+# Livebook happens to have great support for rendering Vega-Lite specification
+# as graphics via [`Kino.VegaLite`](https://hexdocs.pm/kino/Kino.VegaLite.html),
+# so we'll be using that to render our simulation.
 
-## Gameplan
+# ── Gameplan ──
 
-Here's how we're going to approach this:
+# Here's how we're going to approach this:
 
-1. Figure out how to create a game board
-   - by accepting input from `Kino`
-   - and turning it into an `Nx` matrix
-2. Figure out how to draw grids in `VegaLite`
-   - and convert our `Nx` matrix game board into a renderable `VegaLite` dataset
-3. Figure out how to transform our board each tick
-   - by implementing matrix convolution
-   - and using it to create a liveness filter
-4. Figure out how to use `Keno` to continually tick our board
+# 1. Figure out how to create a game board
+#    * by accepting input from `Kino`
+#    * and turning it into an `Nx` matrix
+# 2. Figure out how to draw grids in `VegaLite`
+#    * and convert our `Nx` matrix game board into a renderable `VegaLite` dataset
+# 3. Figure out how to transform our board each tick
+#    * by implementing matrix convolution
+#    * and using it to create a liveness filter
+# 4. Figure out how to use `Keno` to continually tick our board
 
-With that all in place, we should have a running GoL simulation!
+# With that all in place, we should have a running GoL simulation!
 
-## Board Input
+# ── Board Input ──
 
-Now, we can use `Keno` to capture the inputs to our simulation.
+# Now, we can use `Keno` to capture the inputs to our simulation.
 
-<!-- livebook:{"break_markdown":true} -->
+# Let's define the initial state of our game board.
+# We'll say that `0`s represent dead cells, and `1`s represent live ones, and capture a board from a textarea:
 
-Let's define the initial state of our game board.
-We'll say that `0`s represent dead cells, and `1`s represent live ones, and capture a board from a textarea:
-
-<!-- livebook:{"reevaluate_automatically":true} -->
-
-```elixir
 default_board_text = """
 00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
 00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
@@ -202,28 +195,25 @@ default_board_text = """
 """
 
 # initial_board_input =
-  "Initial Game Board: "
-  |> Kino.Input.textarea(default: default_board_text)
+"Initial Game Board: "
+|> Kino.Input.textarea(default: default_board_text)
+
 foo = 1
 Kino.render(initial_board_input)
 
 initial_board_text = Kino.Input.read(initial_board_input)
-```
 
-## Building the Board
+# ── Building the Board ──
 
-Since we'll represent our board as a matrix under the hood, it makes sense to use `0.0` to represent dead cells, and `1.0` to represent live cells.
+# Since we'll represent our board as a matrix under the hood, it makes sense to use `0.0` to represent dead cells, and `1.0` to represent live cells.
 
-While Conway's Game of Life only has "binary" liveness—with no valid state in-between—this is not true of all cellular automata.
-Additionally, our interim transforms may (and in fact, _will_) use fuzzier intermediary numbers when determining liveness.
-Finally, it is good to remember that numerical transforms **_just like_** operating on values between `0.0` and `1.0`.
-They are happier this way: a normalized matrix is a happy matrix.
+# While Conway's Game of Life only has "binary" liveness—with no valid state in-between—this is not true of all cellular automata.
+# Additionally, our interim transforms may (and in fact, _will_) use fuzzier intermediary numbers when determining liveness.
+# Finally, it is good to remember that numerical transforms **_just like_** operating on values between `0.0` and `1.0`.
+# They are happier this way: a normalized matrix is a happy matrix.
 
-So, let's parse our initial board input text, turning it into a list of lists of either `0.0` or `1.0`. Each inner list represents a row; stacked in order by our outer list.
+# So, let's parse our initial board input text, turning it into a list of lists of either `0.0` or `1.0`. Each inner list represents a row; stacked in order by our outer list.
 
-<!-- livebook:{"reevaluate_automatically":true} -->
-
-```elixir
 initial_board_data =
   initial_board_text
   |> String.replace("\n\n", "\n")
@@ -238,34 +228,24 @@ initial_board_data =
       "1" -> 1.0
     end)
   end)
-```
 
-This is exactly the shape we need to turn our input into an `Nx.tensor`! We'll label each dimension as `:y` and `:x` (in that order, outer-most first):
+# This is exactly the shape we need to turn our input into an `Nx.tensor`! We'll label each dimension as `:y` and `:x` (in that order, outer-most first):
 
-<!-- livebook:{"reevaluate_automatically":true} -->
-
-```elixir
 initial_board =
   Nx.tensor(
     initial_board_data,
     names: [:y, :x]
   )
-```
 
-## Drawing a Grid
+# ── Drawing a Grid ──
 
-Now that we have a tensor, we want to be able to render it as a pretty grid in our Livebook with VegaLite.
+# Now that we have a tensor, we want to be able to render it as a pretty grid in our Livebook with VegaLite.
 
-<!-- livebook:{"break_markdown":true} -->
+# Let's define a VegaLite graphic.
+# This graphic will use squares to mark each of its data points,
+# display gridlines for each axis,
+# and pin the x-axis to the top (rather than the bottom, as is the default):
 
-Let's define a VegaLite graphic.
-This graphic will use squares to mark each of its data points,
-display gridlines for each axis,
-and pin the x-axis to the top (rather than the bottom, as is the default):
-
-<!-- livebook:{"reevaluate_automatically":true} -->
-
-```elixir
 example_graphic =
   VegaLite.new()
   |> VegaLite.mark(:square)
@@ -275,31 +255,23 @@ example_graphic =
   )
 
 :ok
-```
 
-VegaLite renders data sets, where each datum is an Elixir map.
-To render our cells on a grid, we'll need to turn each one into a map.
-But first, let's figure out how to get VegaLite to render data at all.
+# VegaLite renders data sets, where each datum is an Elixir map.
+# To render our cells on a grid, we'll need to turn each one into a map.
+# But first, let's figure out how to get VegaLite to render data at all.
 
-<!-- livebook:{"break_markdown":true} -->
+# You can instruct VegaLite how to handle each field in a datum map
+# by "encoding" that field to a "channel".
 
-You can instruct VegaLite how to handle each field in a datum map
-by "encoding" that field to a "channel".
+# Channels are attributes of each datum that can be visualized.
+# We'll be using 4 channels throughout this livebook:
+# the `"x"` and `"y"` channels to position data,
+# the `"color"` channel to paint it,
+# and the `"tooltip"` channel to add hover-hints to it.
 
-Channels are attributes of each datum that can be visualized.
-We'll be using 4 channels throughout this livebook:
-the `"x"` and `"y"` channels to position data,
-the `"color"` channel to paint it,
-and the `"tooltip"` channel to add hover-hints to it.
+# First, let's declare that the fields `"x"` and `"y"` of the maps in our data set
+# should be encoded into the `:x` and `:y` channels of our graphic.
 
-<!-- livebook:{"break_markdown":true} -->
-
-First, let's declare that the fields `"x"` and `"y"` of the maps in our data set
-should be encoded into the `:x` and `:y` channels of our graphic.
-
-<!-- livebook:{"reevaluate_automatically":true} -->
-
-```elixir
 example_graphic =
   example_graphic
   |> VegaLite.encode_field(:x, "x")
@@ -312,17 +284,13 @@ example_dataset = [
 
 example_graphic
 |> VegaLite.data_from_values(example_dataset)
-```
 
-Next, we want the value of each of our cells to be represented as a distinct color in the graphic.
+# Next, we want the value of each of our cells to be represented as a distinct color in the graphic.
 
-VegaLite recognizes the special channel `:color` for this purpose.
-We can bind a map key of `"value"` to the `:color` channel, such that
-every distinct `"value"` in our data gets a distinct color.
+# VegaLite recognizes the special channel `:color` for this purpose.
+# We can bind a map key of `"value"` to the `:color` channel, such that
+# every distinct `"value"` in our data gets a distinct color.
 
-<!-- livebook:{"reevaluate_automatically":true} -->
-
-```elixir
 example_dataset = [
   %{x: 0, y: 0, value: 0.0},
   %{x: 0, y: 1, value: 0.5},
@@ -333,17 +301,13 @@ example_dataset = [
 example_graphic
 |> VegaLite.encode_field(:color, "value")
 |> VegaLite.data_from_values(example_dataset)
-```
 
-We can constrain the available colors to a pre-defined scale,
-with a range of colors that our data set will cycle through.
+# We can constrain the available colors to a pre-defined scale,
+# with a range of colors that our data set will cycle through.
 
-For example, take a Mardi Gras themed color scale that cycles through three different colors,
-with more than three different values:
+# For example, take a Mardi Gras themed color scale that cycles through three different colors,
+# with more than three different values:
 
-<!-- livebook:{"reevaluate_automatically":true} -->
-
-```elixir
 example_dataset = [
   %{x: 0, y: 0, value: 0.0},
   %{x: 0, y: 1, value: 0.5},
@@ -356,29 +320,21 @@ example_dataset = [
 example_graphic
 |> VegaLite.encode_field(:color, "value", scale: [range: ["purple", "green", "gold"]])
 |> VegaLite.data_from_values(example_dataset)
-```
 
-Since we really only want to display GoL cells as white or black,
-and cell values will only ever be `0.0` or `1.0`,
-we can just instruct our grid view
-to color every alternating value `"white"` then `"black"`,
-knowing we will never wrap around:
+# Since we really only want to display GoL cells as white or black,
+# and cell values will only ever be `0.0` or `1.0`,
+# we can just instruct our grid view
+# to color every alternating value `"white"` then `"black"`,
+# knowing we will never wrap around:
 
-<!-- livebook:{"reevaluate_automatically":true} -->
-
-```elixir
 example_graphic =
   example_graphic
   |> VegaLite.encode_field(:color, "value", scale: [range: ["white", "black"]])
 
 :ok
-```
 
-This will cycle between two colors for every value:
+# This will cycle between two colors for every value:
 
-<!-- livebook:{"reevaluate_automatically":true} -->
-
-```elixir
 example_dataset = [
   %{x: 0, y: 0, value: 0.0},
   %{x: 0, y: 1, value: 0.5},
@@ -389,37 +345,23 @@ example_dataset = [
 ]
 
 example_graphic |> VegaLite.data_from_values(example_dataset)
-```
 
-Finally, let's scale the squares on this grid to look like
-proper cellular automata.
+# Finally, let's scale the squares on this grid to look like
+# proper cellular automata.
 
-<!-- livebook:{"break_markdown":true} -->
+# First, let's choose to render graphics at a `800px` width, which displays well in Livebook.
 
-First, let's choose to render graphics at a `800px` width, which displays well in Livebook.
-
-<!-- livebook:{"reevaluate_automatically":true} -->
-
-```elixir
 graphic_width = 800
-```
 
-We want to render our
+# We want to render our
 
-<!-- livebook:{"reevaluate_automatically":true} -->
-
-```elixir
 {board_height, board_width} = Nx.shape(initial_board)
 square_side = graphic_width / board_width
 graphic_height = board_height * square_side
-```
 
-This lets us build our base grid-view, scaled to fit our page.
-Putting it all together:
+# This lets us build our base grid-view, scaled to fit our page.
+# Putting it all together:
 
-<!-- livebook:{"reevaluate_automatically":true} -->
-
-```elixir
 grid_view =
   VegaLite.new(width: graphic_width, height: graphic_height)
   |> VegaLite.mark(:square,
@@ -433,44 +375,32 @@ grid_view =
     scale: [range: ["white", "black"]],
     legend: false
   )
-```
 
-This will be our VegaLite grid-view that we use throughout the rest of the exercise.
+# This will be our VegaLite grid-view that we use throughout the rest of the exercise.
 
-## Rendering a Board
+# ── Rendering a Board ──
 
-Let's create a tool to bridge the gap between an `Nx.tensor` game board
-and a list of maps that VegaLite can render.
+# Let's create a tool to bridge the gap between an `Nx.tensor` game board
+# and a list of maps that VegaLite can render.
 
-We'll call this function `board_to_dataset`.
-It takes a game board,
-and iterates over its dimensions,
-converting it into a list of maps suitable for rendering with VegaLite.
+# We'll call this function `board_to_dataset`.
+# It takes a game board,
+# and iterates over its dimensions,
+# converting it into a list of maps suitable for rendering with VegaLite.
 
-<!-- livebook:{"reevaluate_automatically":true} -->
-
-```elixir
 board_to_dataset = fn board ->
   for y <- 0..(board_height - 1), x <- 0..(board_width - 1) do
     value = Nx.to_number(board[y][x])
     %{x: x, y: y, value: value}
   end
 end
-```
 
-With this, we can finally render our initial board!
+# With this, we can finally render our initial board!
 
-<!-- livebook:{"reevaluate_automatically":true} -->
-
-```elixir
 VegaLite.data_from_values(grid_view, board_to_dataset.(initial_board))
-```
 
-## WIP
+# ── WIP ──
 
-<!-- livebook:{"reevaluate_automatically":true} -->
-
-```elixir
 IO.inspect(initial_board)
 
 neighbourhood = fn board, {y, x} ->
@@ -503,11 +433,7 @@ end
 
 {y, x} = {1, 0}
 neighbourhood.(initial_board, {y, x})
-```
 
-<!-- livebook:{"reevaluate_automatically":true} -->
-
-```elixir
 kernel =
   [
     [-1, -2, -1],
@@ -554,11 +480,7 @@ result =
   |> Nx.slice([1, 1], [3, 3])
 
 IO.inspect({result, expected})
-```
 
-<!-- livebook:{"reevaluate_automatically":true} -->
-
-```elixir
 kernel =
   Nx.tensor([
     [1, 1, 1],
@@ -577,11 +499,7 @@ crowdedness_view =
 crowdedness_view |> Kino.VegaLite.push_many(board_to_dataset.(crowdedness))
 crowdedness_view |> Kino.render()
 :ok
-```
 
-<!-- livebook:{"reevaluate_automatically":true} -->
-
-```elixir
 survivors =
   crowdedness
   |> Nx.map(fn cell ->
@@ -602,13 +520,11 @@ survivors_view =
 survivors_view |> Kino.VegaLite.push_many(board_to_dataset.(survivors))
 survivors_view |> Kino.render()
 :ok
-```
 
-Let's define how fast we want our simulation to run.
+# Let's define how fast we want our simulation to run.
 
-A default of 5-ticks-per-second works well for watching simulations unfold, but feel free to tune to your tastes!
+# A default of 5-ticks-per-second works well for watching simulations unfold, but feel free to tune to your tastes!
 
-```elixir
 tick_rate_ms_input =
   "Tick Rate: "
   |> Kino.Input.number(default: 200)
@@ -619,9 +535,7 @@ tick_rate_ms =
   |> Kino.Input.read()
 
 IO.puts("Simulation will run at a speed of #{tick_rate_ms} milliseconds per tick")
-```
 
-```elixir
 kernel =
   Nx.tensor([
     [1, 1, 1],
@@ -654,4 +568,3 @@ end)
 
 Kino.render(live_view)
 :ok
-```

@@ -1,6 +1,7 @@
-# Surreal Numbers in Elixir
+# Run as: iex --dot-iex path/to/notebook.exs
 
-```elixir
+# Title: Surreal Numbers in Elixir
+
 System.cmd(
   "mix",
   ~w[hex.repo add christhekeele https://hex.chriskeele.com]
@@ -16,73 +17,57 @@ Mix.install(
   ],
   force: true
 )
-```
 
-## Video Format
+# ── Video Format ──
 
-[Watch the ElixirConf 2022 lightning talk here!](https://www.youtube.com/watch?v=f1lNK5gDlwA&t=235s)
+# [Watch the ElixirConf 2022 lightning talk here!](https://www.youtube.com/watch?v=f1lNK5gDlwA&t=235s)
 
-## Representation
+# ── Representation ──
 
-How do surreal numbers work? Let's build up a little intuition by representing them in Elixir.
+# How do surreal numbers work? Let's build up a little intuition by representing them in Elixir.
 
-First, let's bring in some `Livebooks.Helpers` that will let us iteratively build up a module to represent them.
+# First, let's bring in some `Livebooks.Helpers` that will let us iteratively build up a module to represent them.
 
-```elixir
 use Livebooks.Helpers
-```
 
-Surreal numbers are represented by a left set and a right set, where each set contains other full surreal numbers. For the purposes of this experiment, we'll just use a list to represent sets, and a tuple `{left_set, right_set}` to represent a single surreal.
+# Surreal numbers are represented by a left set and a right set, where each set contains other full surreal numbers. For the purposes of this experiment, we'll just use a list to represent sets, and a tuple `{left_set, right_set}` to represent a single surreal.
 
-```elixir
 defmodule Surreal.Guards do
   defguard is_set(surreals) when is_list(surreals)
   defguard is_surreal(surreal) when is_tuple(surreal) and tuple_size(surreal) == 2
 end
-```
 
-## Axioms
+# ── Axioms ──
 
-- Zero
-- One
-- Negation
-- Addition
-- Multiplication
-- Division
+# * Zero
+# * One
+# * Negation
+# * Addition
+# * Multiplication
+# * Division
 
-```elixir
 zero = {[], []}
-```
 
-```elixir
 one = {[zero], []}
-```
 
-## Extensions
+# ── Extensions ──
 
-```elixir
 two = {[one], []}
 three = {[two], []}
 four = {[three], []}
 five = {[four], []}
-```
 
-```elixir
 neg_one = {[], [zero]}
 neg_two = {[], [neg_one]}
 neg_three = {[], [neg_two]}
-```
 
-```elixir
 one_half = {[zero], [one]}
 one_quarter = {[zero], [one_half]}
 three_quarters = {[one_half], [one]}
 five_eighths = {[one_half], [three_quarters]}
-```
 
-## Module
+# ── Module ──
 
-```elixir
 defmodule Surreal, v: 1 do
   @empty_set []
   @zero {@empty_set, @empty_set}
@@ -91,11 +76,9 @@ defmodule Surreal, v: 1 do
   IO.inspect(@zero)
   IO.inspect(@one)
 end
-```
 
-## Set Concatenation
+# ── Set Concatenation ──
 
-```elixir
 defmodule Surreal, v: 2 do
   import Kernel, except: [<>: 2]
   import Surreal.Guards
@@ -114,11 +97,9 @@ defmodule Surreal, v: 2 do
     Enum.uniq(surreals1 ++ surreals2)
   end
 end
-```
 
-## Surreal Math
+# ── Surreal Math ──
 
-```elixir
 defmodule Surreal, v: 3 do
   import Kernel, except: [-: 1, +: 2, -: 2, *: 2, /: 2, <>: 2]
   import Surreal.Guards
@@ -226,11 +207,9 @@ defmodule Surreal, v: 3 do
     Enum.uniq(Enum.flat_map(surreals1, &__MODULE__.*(&1, surreals2)))
   end
 end
-```
 
-## Deriving numbers
+# ── Deriving numbers ──
 
-```elixir
 # import Kernel, except: [-: 1, +: 2, -: 2, *: 2, /: 2, <>: 2]
 # import Surreal
 
@@ -251,11 +230,9 @@ end
 # neg_two |> IO.inspect()
 
 # Surreal
-```
 
-## Performing Multiplication
+# ── Performing Multiplication ──
 
-```elixir
 require Logger
 
 defmodule Surreal, v: 4 do
@@ -337,36 +314,27 @@ defmodule Surreal, v: 4 do
     end
   end
 end
-```
 
-```elixir
 import Kernel, except: [-: 1, +: 2, -: 2, *: 2, /: 2, <>: 2]
 import Surreal
 
 (to_surreal(2) + to_surreal(2)) |> IO.inspect()
-```
 
-```elixir
 import Kernel, except: [-: 1, +: 2, -: 2, *: 2, /: 2, <>: 2]
 import Surreal
 
 (to_surreal(2) * to_surreal(2)) |> IO.inspect()
-```
 
-```elixir
 import Kernel, except: [-: 1, +: 2, -: 2, *: 2, /: 2, <>: 2]
 import Surreal
 
 six = to_surreal(2) * to_surreal(3)
 IO.inspect(six)
 six |> to_number
-```
 
-```elixir
 import Kernel, except: [-: 1, +: 2, -: 2, *: 2, /: 2, <>: 2]
 import Surreal
 
 nine = to_surreal(3) * to_surreal(3)
 IO.inspect(six)
 nine |> to_number
-```

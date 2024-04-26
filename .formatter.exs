@@ -2,7 +2,7 @@
 [
   inputs: [
     "{mix,.formatter}.exs",
-    "{config,lib,test}/**/*.{ex,exs}",
+    "{config,lib,livebooks,test}/**/*.{ex,exs}",
     "html/**/*.html.eex"
   ]
 ]
