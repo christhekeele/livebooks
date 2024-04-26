@@ -13,10 +13,11 @@ Mix.install(
     {:eternal, "~> 1.2"},
     # {:livebooks, github: "christhekeele/livebooks", branch: "latest"},
     {:livebooks, "~> 0.0.1-dev", repo: "christhekeele"}
-    # {:livebooks, path: "/Users/keele/Projects/personal/livebooks"},
   ],
   force: true
 )
+
+# {:livebooks, path: "/Users/keele/Projects/personal/livebooks"},
 
 # ── Video Format ──
 
@@ -34,7 +35,9 @@ use Livebooks.Helpers
 
 defmodule Surreal.Guards do
   defguard is_set(surreals) when is_list(surreals)
-  defguard is_surreal(surreal) when is_tuple(surreal) and tuple_size(surreal) == 2
+
+  defguard is_surreal(surreal)
+           when is_tuple(surreal) and tuple_size(surreal) == 2
 end
 
 # ── Axioms ──
@@ -47,7 +50,6 @@ end
 # * Division
 
 zero = {[], []}
-
 one = {[zero], []}
 
 # ── Extensions ──
@@ -56,11 +58,9 @@ two = {[one], []}
 three = {[two], []}
 four = {[three], []}
 five = {[four], []}
-
 neg_one = {[], [zero]}
 neg_two = {[], [neg_one]}
 neg_three = {[], [neg_two]}
-
 one_half = {[zero], [one]}
 one_quarter = {[zero], [one_half]}
 three_quarters = {[one_half], [one]}
@@ -68,18 +68,17 @@ five_eighths = {[one_half], [three_quarters]}
 
 # ── Module ──
 
-defmodule Surreal, v: 1 do
+defmodule(Surreal, v: 1) do
   @empty_set []
   @zero {@empty_set, @empty_set}
   @one {[@zero], @empty_set}
-
   IO.inspect(@zero)
   IO.inspect(@one)
 end
 
 # ── Set Concatenation ──
 
-defmodule Surreal, v: 2 do
+defmodule(Surreal, v: 2) do
   import Kernel, except: [<>: 2]
   import Surreal.Guards
 
@@ -100,13 +99,10 @@ end
 
 # ── Surreal Math ──
 
-defmodule Surreal, v: 3 do
+defmodule(Surreal, v: 3) do
   import Kernel, except: [-: 1, +: 2, -: 2, *: 2, /: 2, <>: 2]
   import Surreal.Guards
-
-  @doc """
-  Negates a surreal number.
-  """
+  @doc "Negates a surreal number.\n"
   def -@zero do
     @zero
   end
@@ -121,9 +117,7 @@ defmodule Surreal, v: 3 do
     Enum.map(surreals, &-/1)
   end
 
-  @doc """
-  Adds two surreal numbers.
-  """
+  @doc "Adds two surreal numbers.\n"
   def @zero + @zero do
     @zero
   end
@@ -131,7 +125,6 @@ defmodule Surreal, v: 3 do
   def surreal1 + surreal2 when is_surreal(surreal1) and is_surreal(surreal2) do
     {left1, right1} = surreal1
     {left2, right2} = surreal2
-
     left = (left1 + surreal2) <> (left2 + surreal1)
     right = (right1 + surreal2) <> (right2 + surreal1)
     {left, right}
@@ -151,9 +144,7 @@ defmodule Surreal, v: 3 do
     Enum.uniq(Enum.flat_map(surreals1, &__MODULE__.+(&1, surreals2)))
   end
 
-  @doc """
-  Subtracts two surreal numbers.
-  """
+  @doc "Subtracts two surreal numbers.\n"
   def surreal1 - surreal2 when is_surreal(surreal1) and is_surreal(surreal2) do
     surreal1 + -surreal2
   end
@@ -172,11 +163,14 @@ defmodule Surreal, v: 3 do
     Enum.uniq(Enum.flat_map(surreals1, &__MODULE__.-(&1, surreals2)))
   end
 
-  @doc """
-  Multiplies two surreal numbers.
-  """
-  def @one * surreal when is_surreal(surreal), do: surreal
-  def surreal * @one when is_surreal(surreal), do: surreal
+  @doc "Multiplies two surreal numbers.\n"
+  def @one * surreal when is_surreal(surreal) do
+    surreal
+  end
+
+  def surreal * @one when is_surreal(surreal) do
+    surreal
+  end
 
   def surreal1 * surreal2 when is_surreal(surreal1) and is_surreal(surreal2) do
     {left1, right1} = surreal1
@@ -235,28 +229,26 @@ end
 
 require Logger
 
-defmodule Surreal, v: 4 do
-  @doc """
-  Converts a number to a surreal number.
-
-  Supports integers, rational numbers, floats, and ratios of floats.
-  """
-
+defmodule(Surreal, v: 4) do
+  @doc "Converts a number to a surreal number.\n\nSupports integers, rational numbers, floats, and ratios of floats.\n"
   def to_surreal(numerator, denominator \\ 1)
 
   def to_surreal(numerator, denominator) when denominator < 0 do
-    Logger.debug("to_surreal: `#{inspect(numerator)} / #{inspect(denominator)}`")
+    Logger.debug(
+      "to_surreal: `#{inspect(numerator)} / #{inspect(denominator)}`"
+    )
+
     to_surreal(-numerator, denominator)
   end
 
-  def to_surreal(0, denominator) when is_integer(denominator) and denominator != 0, do: @zero
+  def to_surreal(0, denominator)
+      when is_integer(denominator) and denominator != 0 do
+    @zero
+  end
 
   def to_surreal(n, 1) when is_integer(n) and n > 0 do
     Logger.debug("to_surreal: `#{inspect(n)}`")
-
-    Enum.reduce(1..n, @zero, fn _counter, surreal ->
-      surreal + @one
-    end)
+    Enum.reduce(1..n, @zero, fn _counter, surreal -> surreal + @one end)
   end
 
   def to_surreal(n, 1) when is_integer(n) and n < 0 do
@@ -264,17 +256,18 @@ defmodule Surreal, v: 4 do
     -to_surreal(abs(n))
   end
 
-  @doc """
-  Converts a surreal number to a float.
+  @doc "Converts a surreal number to a float.\n\nReturns `{:precise, number}` when the result is exactly that number.\nOtherwise returns and approximation as `{:approximate, number}`.\n"
+  def to_number(@zero) do
+    0.0
+  end
 
-  Returns `{:precise, number}` when the result is exactly that number.
-  Otherwise returns and approximation as `{:approximate, number}`.
-  """
+  def to_number({[@zero], []}) do
+    1.0
+  end
 
-  def to_number(@zero), do: 0.0
-
-  def to_number({[@zero], []}), do: 1.0
-  def to_number({[], [@zero]}), do: Kernel.-(1.0)
+  def to_number({[], [@zero]}) do
+    Kernel.-(1.0)
+  end
 
   def to_number({[left_surreal], []} = surreal) do
     Logger.debug("to_number: `#{inspect(surreal)}`")
@@ -301,40 +294,36 @@ defmodule Surreal, v: 4 do
     right_numbers = Enum.uniq(Enum.map(right_surreals, &to_number/1))
 
     if length(left_numbers) > 1 or length(right_numbers) > 1 do
-      raise "Multi-surreals { #{inspect(left_numbers)} | #{inspect(right_numbers)} }:\n#{inspect(surreal)}"
+      raise "Multi-surreals { #{inspect(left_numbers)} | #{inspect(right_numbers)} }:
+#{inspect(surreal)}"
     else
       Surreal.Cache.try({:to_number, surreal}, fn ->
         case {length(left_numbers), length(right_numbers)} do
-          {0, 0} -> 0
-          {0, 1} -> Kernel.-(List.first(right_numbers), 1)
-          {1, 0} -> Kernel.+(List.first(left_numbers), 1)
-          {1, 1} -> Kernel./(Kernel.+(List.first(left_numbers), List.first(right_numbers)), 2)
+          {0, 0} ->
+            0
+
+          {0, 1} ->
+            Kernel.-(List.first(right_numbers), 1)
+
+          {1, 0} ->
+            Kernel.+(List.first(left_numbers), 1)
+
+          {1, 1} ->
+            Kernel./(
+              Kernel.+(List.first(left_numbers), List.first(right_numbers)),
+              2
+            )
         end
       end)
     end
   end
 end
 
-import Kernel, except: [-: 1, +: 2, -: 2, *: 2, /: 2, <>: 2]
-import Surreal
-
-(to_surreal(2) + to_surreal(2)) |> IO.inspect()
-
-import Kernel, except: [-: 1, +: 2, -: 2, *: 2, /: 2, <>: 2]
-import Surreal
-
-(to_surreal(2) * to_surreal(2)) |> IO.inspect()
-
-import Kernel, except: [-: 1, +: 2, -: 2, *: 2, /: 2, <>: 2]
-import Surreal
-
-six = to_surreal(2) * to_surreal(3)
+Surreal.+(Surreal.to_surreal(2), Surreal.to_surreal(2)) |> IO.inspect()
+Surreal.*(Surreal.to_surreal(2), Surreal.to_surreal(2)) |> IO.inspect()
+six = Surreal.*(Surreal.to_surreal(2), Surreal.to_surreal(3))
 IO.inspect(six)
-six |> to_number
-
-import Kernel, except: [-: 1, +: 2, -: 2, *: 2, /: 2, <>: 2]
-import Surreal
-
-nine = to_surreal(3) * to_surreal(3)
+six |> Surreal.to_number()
+nine = Surreal.*(Surreal.to_surreal(3), Surreal.to_surreal(3))
 IO.inspect(six)
-nine |> to_number
+nine |> Surreal.to_number()

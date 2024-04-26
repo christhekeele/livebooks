@@ -71,8 +71,10 @@ defmodule Livebooks.MixProject do
       elixirc_paths: ["lib", "livebooks", "test"],
       start_permanent: Mix.env() == :prod,
       version: Version.to_string(@version),
-      compilers: Mix.compilers() ++ [:livebooks],
+      # ++ [:livebooks],
+      compilers: Mix.compilers(),
       livebook_paths: ["livebooks"],
+      livebook_output_dir: "test",
       # Informational
       name: @name,
       description: @description,
@@ -199,7 +201,7 @@ defmodule Livebooks.MixProject do
   defp deps(),
     do: [
       {:matcha, "~> 0.1"},
-      {:livebook, "~> 0.12", runtime: false},
+      # {:livebook, "~> 0.12", runtime: false},
       # Site generation
       {:ex_doc, "~> 0.30", only: @doc_envs, runtime: false},
       # Static analysis

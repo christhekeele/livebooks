@@ -201,7 +201,7 @@ default_board_text = """
 
 """
 
-# initial_board_input =
+initial_board_input =
   "Initial Game Board: "
   |> Kino.Input.textarea(default: default_board_text)
 foo = 1

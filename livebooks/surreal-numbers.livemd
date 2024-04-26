@@ -340,33 +340,21 @@ end
 ```
 
 ```elixir
-import Kernel, except: [-: 1, +: 2, -: 2, *: 2, /: 2, <>: 2]
-import Surreal
-
-(to_surreal(2) + to_surreal(2)) |> IO.inspect()
+Surreal.+(Surreal.to_surreal(2), Surreal.to_surreal(2)) |> IO.inspect()
 ```
 
 ```elixir
-import Kernel, except: [-: 1, +: 2, -: 2, *: 2, /: 2, <>: 2]
-import Surreal
-
-(to_surreal(2) * to_surreal(2)) |> IO.inspect()
+Surreal.*(Surreal.to_surreal(2), Surreal.to_surreal(2)) |> IO.inspect()
 ```
 
 ```elixir
-import Kernel, except: [-: 1, +: 2, -: 2, *: 2, /: 2, <>: 2]
-import Surreal
-
-six = to_surreal(2) * to_surreal(3)
+six = Surreal.*(Surreal.to_surreal(2), Surreal.to_surreal(3))
 IO.inspect(six)
-six |> to_number
+six |> Surreal.to_number
 ```
 
 ```elixir
-import Kernel, except: [-: 1, +: 2, -: 2, *: 2, /: 2, <>: 2]
-import Surreal
-
-nine = to_surreal(3) * to_surreal(3)
+nine = Surreal.*(Surreal.to_surreal(3), Surreal.to_surreal(3))
 IO.inspect(six)
-nine |> to_number
+nine |> Surreal.to_number
 ```
