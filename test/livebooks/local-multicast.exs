@@ -1,0 +1,73 @@
+fn ->
+  # Run as: iex --dot-iex path/to/notebook.exs
+
+  # Title: Local Multicast
+
+  Mix.install([], extra_applications: [:logger])
+
+  # ── Section ──
+
+  defmodule Multicasting.BroadcasterReceiver do
+    require Logger
+    use GenServer
+
+    @port (case Mix.env() do
+             :test -> 49_002
+             _ -> 49_001
+           end)
+
+    @active 1
+    @multicast_group_ip {239, 2, 3, 4}
+    @udp_options [
+      :binary,
+      active: @active,
+      add_membership: {@multicast_group_ip, {0, 0, 0, 0}},
+      multicast_loop: true
+    ]
+
+    def start_link(options \\ []) do
+      GenServer.start_link(__MODULE__, {}, options)
+    end
+
+    def init(_opts) do
+      {:ok, socket} = :gen_udp.open(@port, @udp_options)
+      send(self(), :broadcast)
+      {:ok, %{socket: socket}}
+    end
+
+    @broadcast_interval 15_000
+    @message_prefix "multitastic1"
+
+    def handle_info(:broadcast, %{socket: socket} = state) do
+      Process.send_after(self(), :broadcast, @broadcast_interval)
+      :ok = :gen_udp.send(socket, @multicast_group_ip, @port, "#{@message_prefix}#{hostname()}")
+      {:noreply, state}
+    end
+
+    def handle_info({:udp, _port, ip, _port_number, @message_prefix <> hostname}, state) do
+      Logger.info("Broadcast received from #{hostname} 1 on #{format_ip(ip)}")
+      {:noreply, state}
+    end
+
+    def handle_info({:udp, _port, ip, _port_number, message}, state) do
+      Logger.info("Unknown broadcast received from #{format_ip(ip)}: #{message}")
+      {:noreply, state}
+    end
+
+    def handle_info({:udp_passive, _}, %{socket: socket} = state) do
+      :inet.setopts(socket, active: @active)
+      {:noreply, state}
+    end
+
+    defp format_ip(ip_tuple) do
+      ip_tuple |> Tuple.to_list() |> Enum.join(".")
+    end
+
+    defp hostname do
+      {:ok, name} = :inet.gethostname()
+      List.to_string(name)
+    end
+  end
+
+  {:ok, pid} = Multicasting.BroadcasterReceiver.start_link()
+end

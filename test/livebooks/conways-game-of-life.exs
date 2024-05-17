@@ -1,441 +1,572 @@
-# Run as: iex --dot-iex path/to/notebook.exs
-
-# Title: Life in Livebook & Nx
-
-Mix.install(
-  nx: "~> 0.1",
-  kino: "~> 0.4",
-  vega_lite: "~> 0.1",
-  kino_vega_lite: "~> 0.1"
-)
-
-# ── Challenge ──
-
-# José [recently asked](https://twitter.com/josevalim/status/1476292540999647233)
-# if anyone had implemented [Conway's Game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life)
-# in a [Livebook](https://livebook.dev/) using [Vega-Lite](https://hexdocs.pm/kino/Kino.VegaLite.html).
-
-# Having only toyed around with Livebook,
-# having never implemented **GoL** _(Game of Life)_,
-# and having never used Kino/VegaLite,
-# I thought I might also throw [Nx](https://github.com/elixir-nx/nx) _(numerical Elixir)_
-# into the mix, also having no experience with it,
-# and see what I could do!
-
-# So, the goal of this Livebook is to:
-
-# * Implement a GoL simulation
-# * Via `Nx` matrix transforms
-# * Rendered with `VegaLite`
-
-# Let's get cookin'!
-
-# ── Background ──
-
-# ### Conway's Game of Life
-
-# [Conway's Game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life) is the classic [cellular automata](https://en.wikipedia.org/wiki/Cellular_automaton), exploring the idea: **_can complexity organically emerge from very simple rules_**?
-
-# GoL asks us to consider a grid of cells. Each cell can be alive or dead. Each tick of the simulation, each cell transforms given the following rules:
-
-# * If an alive cell is too lonely, with fewer than two alive neighbours, it dies.
-# * If an alive cell is too crowded, with more than three alive neighbours, it dies.
-# * An alive cell with 2 or 3 alive neighbours survives.
-# * A dead cell with exactly 3 alive neighbours becomes alive.
-
-# For the purposes of our game, a "neighbour" is any of the **eight** cells surrounding a cell: up, down, left, right, or diagonal. So given cell `C`, its neighbours are the cells labelled `n`:
-
-# ```
-# ╔═══╦═══╦═══╦═══╦═══╗
-# ║   ║   ║   ║   ║   ║
-# ╠═══╬═══╬═══╬═══╬═══╣
-# ║   ║ n ║ n ║ n ║   ║
-# ╠═══╬═══╬═══╬═══╬═══╣
-# ║   ║ n ║ C ║ n ║   ║
-# ╠═══╬═══╬═══╬═══╬═══╣
-# ║   ║ n ║ n ║ n ║   ║
-# ╠═══╬═══╬═══╬═══╬═══╣
-# ║   ║   ║   ║   ║   ║
-# ╚═══╩═══╩═══╩═══╩═══╝
-# ```
-
-# ### Nx
-
-# [`Nx`](https://github.com/elixir-nx/nx) is Elixir's numeric computation library, notably with efficient tensor operations.
-
-# We'll be encoding our GoL boards as matrices, and implementing each tick of our simulation
-# as a series of matrix operations upon them.
-
-# This notebook will not actually be executing these matrix transforms on a GPU,
-# but it's cool to know that `Nx` has that ability!
-
-# ### Livebook
-
-# What you are viewing right now is a livebook; rendered by [`Livebook`](https://livebook.dev/),
-# a rich interactive Elixir notebook application.
-# It takes markdown files and turns them into what you are experiencing here.
-
-# ### Kino
-
-# [`Kino`](https://hexdocs.pm/kino/Kino.html) is a toolbelt of widgets for livebooks.
-
-# ### VegaLite
-
-# [Vega-Lite](https://vega.github.io/vega-lite/docs/) is a JSON-based graphic grammar.
-
-# Vega-Lite specifications consist of simple mappings of variables in a data set
-# to visual encoding channels such as x, y, color, and size.
-
-# Livebook happens to have great support for rendering Vega-Lite specification
-# as graphics via [`Kino.VegaLite`](https://hexdocs.pm/kino/Kino.VegaLite.html),
-# so we'll be using that to render our simulation.
-
-# ── Gameplan ──
-
-# Here's how we're going to approach this:
-
-# 1. Figure out how to create a game board
-#    * by accepting input from `Kino`
-#    * and turning it into an `Nx` matrix
-# 2. Figure out how to draw grids in `VegaLite`
-#    * and convert our `Nx` matrix game board into a renderable `VegaLite` dataset
-# 3. Figure out how to transform our board each tick
-#    * by implementing matrix convolution
-#    * and using it to create a liveness filter
-# 4. Figure out how to use `Keno` to continually tick our board
-
-# With that all in place, we should have a running GoL simulation!
-
-# ── Board Input ──
-
-# Now, we can use `Keno` to capture the inputs to our simulation.
-
-# Let's define the initial state of our game board.
-# We'll say that `0`s represent dead cells, and `1`s represent live ones, and capture a board from a textarea:
-
-default_board_text =
-  "00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 11000 00000\n\n00000 00000 00000 00000 00000 00000 00000 00000 11000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00001 11000 00000\n00000 00000 00000 00000 00000 00000 00000 00010 00100 00000\n\n00000 00000 00000 00000 00000 00000 00000 00100 00010 00000\n00000 00000 00000 00000 00000 00000 00000 00110 10110 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 10000 00000\n\n00000 00000 00000 00000 00000 00000 00000 00001 01000 00000\n00000 00000 00000 00000 00000 00000 00000 00001 01000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 11000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00100 00000\n00000 00000 00000 00000 00000 00000 00000 00000 01110 00000\n\n00000 00000 00000 00000 00000 00000 00000 00000 10001 00000\n00000 00000 00000 00000 00000 00000 00000 00001 01110 10000\n00000 00000 00000 00000 00000 00000 00000 00000 11111 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 01100 00000\n00000 00000 00000 00000 00000 00000 00000 00000 01100 00000\n\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00001 10000 00000 00000 00000 00000 00000 00000 00000 00000\n00010 10000 00000 00000 00000 00000 00000 00000 00000 00000\n00010 00000 00000 00000 00000 00000 00000 00000 00000 00000\n\n00110 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n00000 00000 00000 00000 00000 00000 00000 00000 00000 00000\n\n"
-
-initial_board_input =
-  "Initial Game Board: " |> Kino.Input.textarea(default: default_board_text)
-
-foo = 1
-Kino.render(initial_board_input)
-initial_board_text = Kino.Input.read(initial_board_input)
-
-# ── Building the Board ──
-
-# Since we'll represent our board as a matrix under the hood, it makes sense to use `0.0` to represent dead cells, and `1.0` to represent live cells.
-
-# While Conway's Game of Life only has "binary" liveness—with no valid state in-between—this is not true of all cellular automata.
-# Additionally, our interim transforms may (and in fact, _will_) use fuzzier intermediary numbers when determining liveness.
-# Finally, it is good to remember that numerical transforms **_just like_** operating on values between `0.0` and `1.0`.
-# They are happier this way: a normalized matrix is a happy matrix.
-
-# So, let's parse our initial board input text, turning it into a list of lists of either `0.0` or `1.0`. Each inner list represents a row; stacked in order by our outer list.
-
-initial_board_data =
-  initial_board_text
-  |> String.replace("\n\n", "\n")
-  |> String.replace(" ", "")
-  |> String.trim("\n")
-  |> String.split("\n")
-  |> Enum.map(fn row ->
-    row
-    |> String.graphemes()
-    |> Enum.map(fn
-      "0" -> 0.0
-      "1" -> 1.0
-    end)
-  end)
-
-# This is exactly the shape we need to turn our input into an `Nx.tensor`! We'll label each dimension as `:y` and `:x` (in that order, outer-most first):
-
-initial_board =
-  Nx.tensor(initial_board_data,
-    names: [:y, :x]
-  )
-
-# ── Drawing a Grid ──
-
-# Now that we have a tensor, we want to be able to render it as a pretty grid in our Livebook with VegaLite.
-
-# Let's define a VegaLite graphic.
-# This graphic will use squares to mark each of its data points,
-# display gridlines for each axis,
-# and pin the x-axis to the top (rather than the bottom, as is the default):
-
-example_graphic =
-  VegaLite.new()
-  |> VegaLite.mark(:square)
-  |> VegaLite.config(axis: [grid: true], axis_X: [orient: "top"])
-
-:ok
-
-# VegaLite renders data sets, where each datum is an Elixir map.
-# To render our cells on a grid, we'll need to turn each one into a map.
-# But first, let's figure out how to get VegaLite to render data at all.
-
-# You can instruct VegaLite how to handle each field in a datum map
-# by "encoding" that field to a "channel".
-
-# Channels are attributes of each datum that can be visualized.
-# We'll be using 4 channels throughout this livebook:
-# the `"x"` and `"y"` channels to position data,
-# the `"color"` channel to paint it,
-# and the `"tooltip"` channel to add hover-hints to it.
-
-# First, let's declare that the fields `"x"` and `"y"` of the maps in our data set
-# should be encoded into the `:x` and `:y` channels of our graphic.
-
-example_graphic =
-  example_graphic
-  |> VegaLite.encode_field(:x, "x")
-  |> VegaLite.encode_field(:y, "y")
-
-example_dataset = [%{x: 0, y: 0}, %{x: 1, y: 1}]
-example_graphic |> VegaLite.data_from_values(example_dataset)
-
-# Next, we want the value of each of our cells to be represented as a distinct color in the graphic.
-
-# VegaLite recognizes the special channel `:color` for this purpose.
-# We can bind a map key of `"value"` to the `:color` channel, such that
-# every distinct `"value"` in our data gets a distinct color.
-
-example_dataset = [
-  %{x: 0, y: 0, value: 0.0},
-  %{x: 0, y: 1, value: 0.5},
-  %{x: 1, y: 0, value: 1.0},
-  %{x: 1, y: 1, value: 1.5}
-]
-
-example_graphic
-|> VegaLite.encode_field(:color, "value")
-|> VegaLite.data_from_values(example_dataset)
-
-# We can constrain the available colors to a pre-defined scale,
-# with a range of colors that our data set will cycle through.
-
-# For example, take a Mardi Gras themed color scale that cycles through three different colors,
-# with more than three different values:
-
-example_dataset = [
-  %{x: 0, y: 0, value: 0.0},
-  %{x: 0, y: 1, value: 0.5},
-  %{x: 1, y: 0, value: 1.0},
-  %{x: 1, y: 1, value: 1.5},
-  %{x: 1, y: 2, value: 2.0},
-  %{x: 2, y: 2, value: 2.5}
-]
-
-example_graphic
-|> VegaLite.encode_field(:color, "value",
-  scale: [range: ["purple", "green", "gold"]]
-)
-|> VegaLite.data_from_values(example_dataset)
-
-# Since we really only want to display GoL cells as white or black,
-# and cell values will only ever be `0.0` or `1.0`,
-# we can just instruct our grid view
-# to color every alternating value `"white"` then `"black"`,
-# knowing we will never wrap around:
-
-example_graphic =
-  example_graphic
-  |> VegaLite.encode_field(:color, "value", scale: [range: ["white", "black"]])
-
-:ok
-
-# This will cycle between two colors for every value:
-
-example_dataset = [
-  %{x: 0, y: 0, value: 0.0},
-  %{x: 0, y: 1, value: 0.5},
-  %{x: 1, y: 0, value: 1.0},
-  %{x: 1, y: 1, value: 1.5},
-  %{x: 1, y: 2, value: 2.0},
-  %{x: 2, y: 2, value: 2.5}
-]
-
-example_graphic |> VegaLite.data_from_values(example_dataset)
-
-# Finally, let's scale the squares on this grid to look like
-# proper cellular automata.
-
-# First, let's choose to render graphics at a `800px` width, which displays well in Livebook.
-
-graphic_width = 800
-
-# We want to render our
-
-{board_height, board_width} = Nx.shape(initial_board)
-square_side = graphic_width / board_width
-graphic_height = board_height * square_side
-
-# This lets us build our base grid-view, scaled to fit our page.
-# Putting it all together:
-
-grid_view =
-  VegaLite.new(width: graphic_width, height: graphic_height)
-  |> VegaLite.mark(:square, size: :math.pow(square_side, 2), legend: false)
-  |> VegaLite.config(
-    axis: [grid: true, labels: false, title: nil, ticks: false]
-  )
-  |> VegaLite.encode_field(:x, "x")
-  |> VegaLite.encode_field(:y, "y")
-  |> VegaLite.encode_field(:color, "value",
-    scale: [range: ["white", "black"]],
-    legend: false
-  )
-
-# This will be our VegaLite grid-view that we use throughout the rest of the exercise.
-
-# ── Rendering a Board ──
-
-# Let's create a tool to bridge the gap between an `Nx.tensor` game board
-# and a list of maps that VegaLite can render.
-
-# We'll call this function `board_to_dataset`.
-# It takes a game board,
-# and iterates over its dimensions,
-# converting it into a list of maps suitable for rendering with VegaLite.
-
-board_to_dataset = fn board ->
-  for y <- 0..(board_height - 1), x <- 0..(board_width - 1) do
-    value = Nx.to_number(board[y][x])
-    %{x: x, y: y, value: value}
-  end
-end
-
-# With this, we can finally render our initial board!
-
-VegaLite.data_from_values(grid_view, board_to_dataset.(initial_board))
-
-# ── WIP ──
-
-IO.inspect(initial_board)
-
-neighbourhood = fn board, {y, x} ->
-  {height, width} = Nx.shape(board)
-
-  Nx.tensor([
-    [
-      Nx.to_number(board[y - 1][x - 1]),
-      Nx.to_number(board[y - 1][x]),
-      Nx.to_number(board[y - 1][rem(x + 1, width)])
-    ],
-    [
-      Nx.to_number(board[y][x - 1]),
-      Nx.to_number(board[y][x]),
-      Nx.to_number(board[y][rem(x + 1, width)])
-    ],
-    [
-      Nx.to_number(board[rem(y + 1, height)][x - 1]),
-      Nx.to_number(board[rem(y + 1, height)][x]),
-      Nx.to_number(board[rem(y + 1, height)][rem(x + 1, width)])
-    ]
+fn ->
+  # Run as: iex --dot-iex path/to/notebook.exs
+
+  # Title: Life in Livebook & Nx
+
+  Mix.install([
+    {:nx, "~> 0.1"},
+    {:kino, "~> 0.4"},
+    {:vega_lite, "~> 0.1"},
+    {:kino_vega_lite, "~> 0.1"}
   ])
-end
 
-{height, width} = Nx.shape(initial_board) |> IO.inspect(label: "height+width")
+  # ── Challenge ──
 
-for y <- 0..(height - 1), x <- 0..(width - 1) do
-  neighbourhood.(initial_board, {y, x})
-end
+  # José [recently asked](https://twitter.com/josevalim/status/1476292540999647233)
+  # if anyone had implemented [Conway's Game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life)
+  # in a [Livebook](https://livebook.dev/) using [Vega-Lite](https://hexdocs.pm/kino/Kino.VegaLite.html).
 
-{y, x} = {1, 0}
-neighbourhood.(initial_board, {y, x})
-kernel = [[-1, -2, -1], [0, 0, 0], [1, 2, 1]] |> Nx.tensor()
-input = [[1, 2, 3], [4, 5, 6], ~c"\a\b\t"] |> Nx.tensor()
+  # Having only toyed around with Livebook,
+  # having never implemented **GoL** _(Game of Life)_,
+  # and having never used Kino/VegaLite,
+  # I thought I might also throw [Nx](https://github.com/elixir-nx/nx) _(numerical Elixir)_
+  # into the mix, also having no experience with it,
+  # and see what I could do!
 
-convolute = fn input, kernel ->
-  {height, width} = Nx.shape(input)
+  # So, the goal of this Livebook is to:
 
-  for y <- 0..(height - 1) do
-    for x <- 0..(width - 1) do
-      kernel
-      |> Nx.reverse()
-      |> Nx.multiply(neighbourhood.(input, {y, x}))
-      |> Nx.sum()
-      |> Nx.to_number()
+  # * Implement a GoL simulation
+  # * Via `Nx` matrix transforms
+  # * Rendered with `VegaLite`
+
+  # Let's get cookin'!
+
+  # ── Background ──
+
+  # ### Conway's Game of Life
+
+  # [Conway's Game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life) is the classic [cellular automata](https://en.wikipedia.org/wiki/Cellular_automaton), exploring the idea: **_can complexity organically emerge from very simple rules_**?
+
+  # GoL asks us to consider a grid of cells. Each cell can be alive or dead. Each tick of the simulation, each cell transforms given the following rules:
+
+  # * If an alive cell is too lonely, with fewer than two alive neighbours, it dies.
+  # * If an alive cell is too crowded, with more than three alive neighbours, it dies.
+  # * An alive cell with 2 or 3 alive neighbours survives.
+  # * A dead cell with exactly 3 alive neighbours becomes alive.
+
+  # For the purposes of our game, a "neighbour" is any of the **eight** cells surrounding a cell: up, down, left, right, or diagonal. So given cell `C`, its neighbours are the cells labelled `n`:
+
+  # ```
+  # ╔═══╦═══╦═══╦═══╦═══╗
+  # ║   ║   ║   ║   ║   ║
+  # ╠═══╬═══╬═══╬═══╬═══╣
+  # ║   ║ n ║ n ║ n ║   ║
+  # ╠═══╬═══╬═══╬═══╬═══╣
+  # ║   ║ n ║ C ║ n ║   ║
+  # ╠═══╬═══╬═══╬═══╬═══╣
+  # ║   ║ n ║ n ║ n ║   ║
+  # ╠═══╬═══╬═══╬═══╬═══╣
+  # ║   ║   ║   ║   ║   ║
+  # ╚═══╩═══╩═══╩═══╩═══╝
+  # ```
+
+  # ### Nx
+
+  # [`Nx`](https://github.com/elixir-nx/nx) is Elixir's numeric computation library, notably with efficient tensor operations.
+
+  # We'll be encoding our GoL boards as matrices, and implementing each tick of our simulation
+  # as a series of matrix operations upon them.
+
+  # This notebook will not actually be executing these matrix transforms on a GPU,
+  # but it's cool to know that `Nx` has that ability!
+
+  # ### Livebook
+
+  # What you are viewing right now is a livebook; rendered by [`Livebook`](https://livebook.dev/),
+  # a rich interactive Elixir notebook application.
+  # It takes markdown files and turns them into what you are experiencing here.
+
+  # ### Kino
+
+  # [`Kino`](https://hexdocs.pm/kino/Kino.html) is a toolbelt of widgets for livebooks.
+
+  # ### VegaLite
+
+  # [Vega-Lite](https://vega.github.io/vega-lite/docs/) is a JSON-based graphic grammar.
+
+  # Vega-Lite specifications consist of simple mappings of variables in a data set
+  # to visual encoding channels such as x, y, color, and size.
+
+  # Livebook happens to have great support for rendering Vega-Lite specification
+  # as graphics via [`Kino.VegaLite`](https://hexdocs.pm/kino/Kino.VegaLite.html),
+  # so we'll be using that to render our simulation.
+
+  # ── Gameplan ──
+
+  # Here's how we're going to approach this:
+
+  # 1. Figure out how to create a game board
+  #    * by accepting input from `Kino`
+  #    * and turning it into an `Nx` matrix
+  # 2. Figure out how to draw grids in `VegaLite`
+  #    * and convert our `Nx` matrix game board into a renderable `VegaLite` dataset
+  # 3. Figure out how to transform our board each tick
+  #    * by implementing matrix convolution
+  #    * and using it to create a liveness filter
+  # 4. Figure out how to use `Keno` to continually tick our board
+
+  # With that all in place, we should have a running GoL simulation!
+
+  # ── Board Input ──
+
+  # Now, we can use `Keno` to capture the inputs to our simulation.
+
+  # Let's define the initial state of our game board.
+  # We'll say that `0`s represent dead cells, and `1`s represent live ones, and capture a board from a textarea:
+
+  default_board_text = """
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 11000 00000
+
+  00000 00000 00000 00000 00000 00000 00000 00000 11000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00001 11000 00000
+  00000 00000 00000 00000 00000 00000 00000 00010 00100 00000
+
+  00000 00000 00000 00000 00000 00000 00000 00100 00010 00000
+  00000 00000 00000 00000 00000 00000 00000 00110 10110 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 10000 00000
+
+  00000 00000 00000 00000 00000 00000 00000 00001 01000 00000
+  00000 00000 00000 00000 00000 00000 00000 00001 01000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 11000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00100 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 01110 00000
+
+  00000 00000 00000 00000 00000 00000 00000 00000 10001 00000
+  00000 00000 00000 00000 00000 00000 00000 00001 01110 10000
+  00000 00000 00000 00000 00000 00000 00000 00000 11111 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 01100 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 01100 00000
+
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00001 10000 00000 00000 00000 00000 00000 00000 00000 00000
+  00010 10000 00000 00000 00000 00000 00000 00000 00000 00000
+  00010 00000 00000 00000 00000 00000 00000 00000 00000 00000
+
+  00110 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+  00000 00000 00000 00000 00000 00000 00000 00000 00000 00000
+
+  """
+
+  initial_board_input =
+    "Initial Game Board: "
+    |> Kino.Input.textarea(default: default_board_text)
+
+  foo = 1
+  Kino.render(initial_board_input)
+
+  initial_board_text = Kino.Input.read(initial_board_input)
+
+  # ── Building the Board ──
+
+  # Since we'll represent our board as a matrix under the hood, it makes sense to use `0.0` to represent dead cells, and `1.0` to represent live cells.
+
+  # While Conway's Game of Life only has "binary" liveness—with no valid state in-between—this is not true of all cellular automata.
+  # Additionally, our interim transforms may (and in fact, _will_) use fuzzier intermediary numbers when determining liveness.
+  # Finally, it is good to remember that numerical transforms **_just like_** operating on values between `0.0` and `1.0`.
+  # They are happier this way: a normalized matrix is a happy matrix.
+
+  # So, let's parse our initial board input text, turning it into a list of lists of either `0.0` or `1.0`. Each inner list represents a row; stacked in order by our outer list.
+
+  initial_board_data =
+    initial_board_text
+    |> String.replace("\n\n", "\n")
+    |> String.replace(" ", "")
+    |> String.trim("\n")
+    |> String.split("\n")
+    |> Enum.map(fn row ->
+      row
+      |> String.graphemes()
+      |> Enum.map(fn
+        "0" -> 0.0
+        "1" -> 1.0
+      end)
+    end)
+
+  # This is exactly the shape we need to turn our input into an `Nx.tensor`! We'll label each dimension as `:y` and `:x` (in that order, outer-most first):
+
+  initial_board =
+    Nx.tensor(
+      initial_board_data,
+      names: [:y, :x]
+    )
+
+  # ── Drawing a Grid ──
+
+  # Now that we have a tensor, we want to be able to render it as a pretty grid in our Livebook with VegaLite.
+
+  # Let's define a VegaLite graphic.
+  # This graphic will use squares to mark each of its data points,
+  # display gridlines for each axis,
+  # and pin the x-axis to the top (rather than the bottom, as is the default):
+
+  example_graphic =
+    VegaLite.new()
+    |> VegaLite.mark(:square)
+    |> VegaLite.config(
+      axis: [grid: true],
+      axis_X: [orient: "top"]
+    )
+
+  :ok
+
+  # VegaLite renders data sets, where each datum is an Elixir map.
+  # To render our cells on a grid, we'll need to turn each one into a map.
+  # But first, let's figure out how to get VegaLite to render data at all.
+
+  # You can instruct VegaLite how to handle each field in a datum map
+  # by "encoding" that field to a "channel".
+
+  # Channels are attributes of each datum that can be visualized.
+  # We'll be using 4 channels throughout this livebook:
+  # the `"x"` and `"y"` channels to position data,
+  # the `"color"` channel to paint it,
+  # and the `"tooltip"` channel to add hover-hints to it.
+
+  # First, let's declare that the fields `"x"` and `"y"` of the maps in our data set
+  # should be encoded into the `:x` and `:y` channels of our graphic.
+
+  example_graphic =
+    example_graphic
+    |> VegaLite.encode_field(:x, "x")
+    |> VegaLite.encode_field(:y, "y")
+
+  example_dataset = [
+    %{x: 0, y: 0},
+    %{x: 1, y: 1}
+  ]
+
+  example_graphic
+  |> VegaLite.data_from_values(example_dataset)
+
+  # Next, we want the value of each of our cells to be represented as a distinct color in the graphic.
+
+  # VegaLite recognizes the special channel `:color` for this purpose.
+  # We can bind a map key of `"value"` to the `:color` channel, such that
+  # every distinct `"value"` in our data gets a distinct color.
+
+  example_dataset = [
+    %{x: 0, y: 0, value: 0.0},
+    %{x: 0, y: 1, value: 0.5},
+    %{x: 1, y: 0, value: 1.0},
+    %{x: 1, y: 1, value: 1.5}
+  ]
+
+  example_graphic
+  |> VegaLite.encode_field(:color, "value")
+  |> VegaLite.data_from_values(example_dataset)
+
+  # We can constrain the available colors to a pre-defined scale,
+  # with a range of colors that our data set will cycle through.
+
+  # For example, take a Mardi Gras themed color scale that cycles through three different colors,
+  # with more than three different values:
+
+  example_dataset = [
+    %{x: 0, y: 0, value: 0.0},
+    %{x: 0, y: 1, value: 0.5},
+    %{x: 1, y: 0, value: 1.0},
+    %{x: 1, y: 1, value: 1.5},
+    %{x: 1, y: 2, value: 2.0},
+    %{x: 2, y: 2, value: 2.5}
+  ]
+
+  example_graphic
+  |> VegaLite.encode_field(:color, "value", scale: [range: ["purple", "green", "gold"]])
+  |> VegaLite.data_from_values(example_dataset)
+
+  # Since we really only want to display GoL cells as white or black,
+  # and cell values will only ever be `0.0` or `1.0`,
+  # we can just instruct our grid view
+  # to color every alternating value `"white"` then `"black"`,
+  # knowing we will never wrap around:
+
+  example_graphic =
+    example_graphic
+    |> VegaLite.encode_field(:color, "value", scale: [range: ["white", "black"]])
+
+  :ok
+
+  # This will cycle between two colors for every value:
+
+  example_dataset = [
+    %{x: 0, y: 0, value: 0.0},
+    %{x: 0, y: 1, value: 0.5},
+    %{x: 1, y: 0, value: 1.0},
+    %{x: 1, y: 1, value: 1.5},
+    %{x: 1, y: 2, value: 2.0},
+    %{x: 2, y: 2, value: 2.5}
+  ]
+
+  example_graphic |> VegaLite.data_from_values(example_dataset)
+
+  # Finally, let's scale the squares on this grid to look like
+  # proper cellular automata.
+
+  # First, let's choose to render graphics at a `800px` width, which displays well in Livebook.
+
+  graphic_width = 800
+
+  # We want to render our
+
+  {board_height, board_width} = Nx.shape(initial_board)
+  square_side = graphic_width / board_width
+  graphic_height = board_height * square_side
+
+  # This lets us build our base grid-view, scaled to fit our page.
+  # Putting it all together:
+
+  grid_view =
+    VegaLite.new(width: graphic_width, height: graphic_height)
+    |> VegaLite.mark(:square,
+      size: :math.pow(square_side, 2),
+      legend: false
+    )
+    |> VegaLite.config(axis: [grid: true, labels: false, title: nil, ticks: false])
+    |> VegaLite.encode_field(:x, "x")
+    |> VegaLite.encode_field(:y, "y")
+    |> VegaLite.encode_field(:color, "value",
+      scale: [range: ["white", "black"]],
+      legend: false
+    )
+
+  # This will be our VegaLite grid-view that we use throughout the rest of the exercise.
+
+  # ── Rendering a Board ──
+
+  # Let's create a tool to bridge the gap between an `Nx.tensor` game board
+  # and a list of maps that VegaLite can render.
+
+  # We'll call this function `board_to_dataset`.
+  # It takes a game board,
+  # and iterates over its dimensions,
+  # converting it into a list of maps suitable for rendering with VegaLite.
+
+  board_to_dataset = fn board ->
+    for y <- 0..(board_height - 1), x <- 0..(board_width - 1) do
+      value = Nx.to_number(board[y][x])
+      %{x: x, y: y, value: value}
     end
   end
-  |> Nx.tensor()
-end
 
-expected = [[-13, -20, -17], [-18, -24, -18], [12, 20, 17]] |> Nx.tensor()
+  # With this, we can finally render our initial board!
 
-result =
-  input
-  |> Nx.pad(0, [{1, 1, 0}, {1, 1, 0}])
-  |> convolute.(kernel)
-  |> Nx.slice([1, 1], [3, 3])
+  VegaLite.data_from_values(grid_view, board_to_dataset.(initial_board))
 
-IO.inspect({result, expected})
-kernel = Nx.tensor([[1, 1, 1], [1, 0.5, 1], [1, 1, 1]])
-crowdedness = convolute.(initial_board, kernel) |> IO.inspect()
+  # ── WIP ──
 
-crowdedness_view =
-  grid_view
-  |> VegaLite.encode_field(:color, "value", type: :quantitative)
-  |> VegaLite.encode_field(:tooltip, "value")
-  |> Kino.VegaLite.new()
+  IO.inspect(initial_board)
 
-crowdedness_view |> Kino.VegaLite.push_many(board_to_dataset.(crowdedness))
-crowdedness_view |> Kino.render()
-:ok
+  neighbourhood = fn board, {y, x} ->
+    {height, width} = Nx.shape(board)
 
-survivors =
-  crowdedness
-  |> Nx.map(fn cell ->
-    value = Nx.to_number(cell)
+    Nx.tensor([
+      [
+        Nx.to_number(board[y - 1][x - 1]),
+        Nx.to_number(board[y - 1][x]),
+        Nx.to_number(board[y - 1][rem(x + 1, width)])
+      ],
+      [
+        Nx.to_number(board[y][x - 1]),
+        Nx.to_number(board[y][x]),
+        Nx.to_number(board[y][rem(x + 1, width)])
+      ],
+      [
+        Nx.to_number(board[rem(y + 1, height)][x - 1]),
+        Nx.to_number(board[rem(y + 1, height)][x]),
+        Nx.to_number(board[rem(y + 1, height)][rem(x + 1, width)])
+      ]
+    ])
+  end
 
-    if 2.5 <= value and value <= 3.5 do
-      1.0
-    else
-      0.0
+  {height, width} = Nx.shape(initial_board) |> IO.inspect(label: "height+width")
+
+  for y <- 0..(height - 1), x <- 0..(width - 1) do
+    neighbourhood.(initial_board, {y, x})
+  end
+
+  {y, x} = {1, 0}
+  neighbourhood.(initial_board, {y, x})
+
+  kernel =
+    [
+      [-1, -2, -1],
+      [0, 0, 0],
+      [1, 2, 1]
+    ]
+    |> Nx.tensor()
+
+  input =
+    [
+      [1, 2, 3],
+      [4, 5, 6],
+      [7, 8, 9]
+    ]
+    |> Nx.tensor()
+
+  convolute = fn input, kernel ->
+    {height, width} = Nx.shape(input)
+
+    for y <- 0..(height - 1) do
+      for x <- 0..(width - 1) do
+        kernel
+        |> Nx.reverse()
+        |> Nx.multiply(neighbourhood.(input, {y, x}))
+        |> Nx.sum()
+        |> Nx.to_number()
+      end
     end
+    |> Nx.tensor()
+  end
+
+  expected =
+    [
+      [-13, -20, -17],
+      [-18, -24, -18],
+      [12, 20, 17]
+    ]
+    |> Nx.tensor()
+
+  result =
+    input
+    |> Nx.pad(0, [{1, 1, 0}, {1, 1, 0}])
+    |> convolute.(kernel)
+    |> Nx.slice([1, 1], [3, 3])
+
+  IO.inspect({result, expected})
+
+  kernel =
+    Nx.tensor([
+      [1, 1, 1],
+      [1, 0.5, 1],
+      [1, 1, 1]
+    ])
+
+  crowdedness = convolute.(initial_board, kernel) |> IO.inspect()
+
+  crowdedness_view =
+    grid_view
+    |> VegaLite.encode_field(:color, "value", type: :quantitative)
+    |> VegaLite.encode_field(:tooltip, "value")
+    |> Kino.VegaLite.new()
+
+  crowdedness_view |> Kino.VegaLite.push_many(board_to_dataset.(crowdedness))
+  crowdedness_view |> Kino.render()
+  :ok
+
+  survivors =
+    crowdedness
+    |> Nx.map(fn cell ->
+      value = Nx.to_number(cell)
+
+      if 2.5 <= value and value <= 3.5 do
+        1.0
+      else
+        0.0
+      end
+    end)
+    |> IO.inspect()
+
+  survivors_view =
+    grid_view
+    |> Kino.VegaLite.new()
+
+  survivors_view |> Kino.VegaLite.push_many(board_to_dataset.(survivors))
+  survivors_view |> Kino.render()
+  :ok
+
+  # Let's define how fast we want our simulation to run.
+
+  # A default of 5-ticks-per-second works well for watching simulations unfold, but feel free to tune to your tastes!
+
+  tick_rate_ms_input =
+    "Tick Rate: "
+    |> Kino.Input.number(default: 200)
+    |> Kino.render()
+
+  tick_rate_ms =
+    tick_rate_ms_input
+    |> Kino.Input.read()
+
+  IO.puts("Simulation will run at a speed of #{tick_rate_ms} milliseconds per tick")
+
+  kernel =
+    Nx.tensor([
+      [1, 1, 1],
+      [1, 0.5, 1],
+      [1, 1, 1]
+    ])
+
+  live_view =
+    grid_view
+    |> Kino.VegaLite.new()
+
+  Kino.VegaLite.push_many(live_view, board_to_dataset.(initial_board))
+
+  Kino.VegaLite.periodically(live_view, tick_rate_ms, initial_board, fn board ->
+    Kino.VegaLite.clear(live_view)
+    Kino.VegaLite.push_many(live_view, board_to_dataset.(board))
+
+    {:cont,
+     convolute.(board, kernel)
+     |> Nx.map(fn cell ->
+       value = Nx.to_number(cell)
+
+       if 2.5 <= value and value <= 3.5 do
+         1.0
+       else
+         0.0
+       end
+     end)}
   end)
-  |> IO.inspect()
 
-survivors_view = grid_view |> Kino.VegaLite.new()
-survivors_view |> Kino.VegaLite.push_many(board_to_dataset.(survivors))
-survivors_view |> Kino.render()
-:ok
-
-# Let's define how fast we want our simulation to run.
-
-# A default of 5-ticks-per-second works well for watching simulations unfold, but feel free to tune to your tastes!
-
-tick_rate_ms_input =
-  "Tick Rate: " |> Kino.Input.number(default: 200) |> Kino.render()
-
-tick_rate_ms = tick_rate_ms_input |> Kino.Input.read()
-
-IO.puts(
-  "Simulation will run at a speed of #{tick_rate_ms} milliseconds per tick"
-)
-
-kernel = Nx.tensor([[1, 1, 1], [1, 0.5, 1], [1, 1, 1]])
-live_view = grid_view |> Kino.VegaLite.new()
-Kino.VegaLite.push_many(live_view, board_to_dataset.(initial_board))
-
-Kino.VegaLite.periodically(live_view, tick_rate_ms, initial_board, fn board ->
-  Kino.VegaLite.clear(live_view)
-  Kino.VegaLite.push_many(live_view, board_to_dataset.(board))
-
-  {:cont,
-   convolute.(board, kernel)
-   |> Nx.map(fn cell ->
-     value = Nx.to_number(cell)
-
-     if 2.5 <= value and value <= 3.5 do
-       1.0
-     else
-       0.0
-     end
-   end)}
-end)
-
-Kino.render(live_view)
-:ok
+  Kino.render(live_view)
+  :ok
+end

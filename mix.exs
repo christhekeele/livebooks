@@ -201,10 +201,10 @@ defmodule Livebooks.MixProject do
   defp deps(),
     do: [
       {:matcha, "~> 0.1"},
-      # {:livebook, "~> 0.12", runtime: false},
       # Site generation
       {:ex_doc, "~> 0.30", only: @doc_envs, runtime: false},
       # Static analysis
+      {:livebook, "~> 0.12", only: @dev_envs, runtime: false},
       {:credo, "~> 1.7", only: @dev_envs, runtime: false},
       {:dialyxir, "~> 1.4", only: @dev_envs, runtime: false, override: true},
       {:excoveralls, "~> 0.18", only: :test}
@@ -263,7 +263,7 @@ defmodule Livebooks.MixProject do
       flags: ["-Wunmatched_returns", :error_handling, :underspecs],
       ignore_warnings: ".dialyzer_ignore.exs",
       list_unused_filters: true,
-      plt_add_apps: [],
+      plt_add_apps: [:mix, :livebook],
       plt_ignore_apps: []
     ]
 

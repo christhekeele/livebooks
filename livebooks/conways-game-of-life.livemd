@@ -3,6 +3,7 @@
 # Life in Livebook & Nx
 
 ```elixir
+
 Mix.install([
   {:nx, "~> 0.1"},
   {:kino, "~> 0.4"},
